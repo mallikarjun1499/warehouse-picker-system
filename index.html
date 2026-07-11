@@ -1,0 +1,149 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/><meta name="viewport" content="width=device-width,initial-scale=1.0"/>
+<title>Dashboard — Warehouse Picker System</title>
+<script src="https://cdn.tailwindcss.com"></script>
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css"/>
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/aos/2.3.4/aos.css"/>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet"/>
+<link rel="stylesheet" href="assets/css/style.css"/>
+</head>
+<body>
+<aside id="sidebar">
+  <div class="logo-area"><div class="flex items-center gap-3">
+    <div class="w-10 h-10 rounded-xl bg-blue-600 flex items-center justify-center"><i class="fas fa-warehouse text-white"></i></div>
+    <div><div class="text-white font-bold text-sm">Warehouse</div><div class="text-blue-400 text-xs">Route Optimizer</div></div>
+  </div></div>
+  <nav>
+    <a href="index.html"     data-page="dashboard"><span class="nav-icon"><i class="fas fa-house"></i></span>Dashboard</a>
+    <a href="load-data.html" data-page="load-data"><span class="nav-icon"><i class="fas fa-file-excel"></i></span>Load Data</a>
+    <a href="orders.html"    data-page="orders"><span class="nav-icon"><i class="fas fa-list-check"></i></span>Orders</a>
+    <a href="pickers.html"   data-page="pickers"><span class="nav-icon"><i class="fas fa-hard-hat"></i></span>Pickers</a>
+    <a href="optimize.html"  data-page="optimize"><span class="nav-icon"><i class="fas fa-route"></i></span>Optimize</a>
+    <a href="reports.html"   data-page="reports"><span class="nav-icon"><i class="fas fa-file-pdf"></i></span>Reports</a>
+  </nav>
+  <div class="p-4 border-t border-slate-800"><p class="text-xs text-slate-600 text-center">© 2025 Warehouse Picker System</p></div>
+</aside>
+<div id="sidebarOverlay" class="hidden"></div>
+<div id="main">
+  <div class="topbar">
+    <button id="sidebarToggle" class="lg:hidden mr-3 text-slate-400 hover:text-white"><i class="fas fa-bars text-lg"></i></button>
+    <div><div class="page-title">Dashboard</div><div class="page-subtitle">Warehouse Picker Route Optimization System</div></div>
+    <span id="dataBadge" class="text-xs font-semibold px-3 py-1 rounded-full bg-slate-800 text-slate-400 border border-slate-700">No Data</span>
+  </div>
+  <div class="page-content">
+    <!-- Hero -->
+    <div class="glass-card rounded-2xl p-7 mb-7 relative overflow-hidden" data-aos="fade-up">
+      <div class="absolute inset-0 bg-gradient-to-r from-blue-600/10 to-transparent pointer-events-none rounded-2xl"></div>
+      <div class="relative flex items-center gap-4">
+        <div class="w-14 h-14 rounded-2xl bg-blue-600/20 flex items-center justify-center flex-shrink-0"><i class="fas fa-warehouse text-blue-400 text-2xl"></i></div>
+        <div>
+          <h1 class="text-2xl font-bold text-white">Warehouse Picker Route Optimizer</h1>
+          <p class="text-slate-400 text-sm mt-1">Genetic Algorithm · Manhattan Distance · Real-time Route Optimization</p>
+        </div>
+      </div>
+    </div>
+    <!-- KPIs -->
+    <div class="grid grid-cols-2 lg:grid-cols-5 gap-4 mb-7">
+      <div class="glass-card rounded-2xl p-5 bg-gradient-to-br from-blue-600/20 to-blue-900/10 border border-blue-500/30" data-aos="fade-up" data-aos-delay="0">
+        <div class="flex items-center gap-2 mb-2"><i class="fas fa-boxes-stacked text-blue-400 text-sm"></i><span class="text-slate-400 text-xs font-semibold uppercase tracking-wide">Orders</span></div>
+        <div id="kpiOrders" class="text-3xl font-bold text-white">0</div>
+      </div>
+      <div class="glass-card rounded-2xl p-5 bg-gradient-to-br from-emerald-600/20 to-emerald-900/10 border border-emerald-500/30" data-aos="fade-up" data-aos-delay="60">
+        <div class="flex items-center gap-2 mb-2"><i class="fas fa-hard-hat text-emerald-400 text-sm"></i><span class="text-slate-400 text-xs font-semibold uppercase tracking-wide">Pickers</span></div>
+        <div id="kpiPickers" class="text-3xl font-bold text-white">0</div>
+      </div>
+      <div class="glass-card rounded-2xl p-5 bg-gradient-to-br from-amber-600/20 to-amber-900/10 border border-amber-500/30" data-aos="fade-up" data-aos-delay="120">
+        <div class="flex items-center gap-2 mb-2"><i class="fas fa-location-dot text-amber-400 text-sm"></i><span class="text-slate-400 text-xs font-semibold uppercase tracking-wide">Locations</span></div>
+        <div id="kpiLocs" class="text-3xl font-bold text-white">0</div>
+      </div>
+      <div class="glass-card rounded-2xl p-5 bg-gradient-to-br from-purple-600/20 to-purple-900/10 border border-purple-500/30" data-aos="fade-up" data-aos-delay="180">
+        <div class="flex items-center gap-2 mb-2"><i class="fas fa-user-check text-purple-400 text-sm"></i><span class="text-slate-400 text-xs font-semibold uppercase tracking-wide">Current Picker</span></div>
+        <div id="kpiPicker" class="text-lg font-bold text-white truncate">—</div>
+      </div>
+      <div class="glass-card rounded-2xl p-5 bg-gradient-to-br from-teal-600/20 to-teal-900/10 border border-teal-500/30" data-aos="fade-up" data-aos-delay="240">
+        <div class="flex items-center gap-2 mb-2"><i class="fas fa-clock text-teal-400 text-sm"></i><span class="text-slate-400 text-xs font-semibold uppercase tracking-wide">Avg Travel Time</span></div>
+        <div id="kpiTime" class="text-3xl font-bold text-white">—</div>
+      </div>
+    </div>
+    <!-- Workflow + Status -->
+    <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+      <div class="lg:col-span-2 glass-card rounded-2xl p-6" data-aos="fade-up">
+        <div class="section-header mb-5"><i class="fas fa-sitemap text-blue-400"></i> How It Works</div>
+        <div class="space-y-3">
+          <div class="flex items-start gap-4 p-4 bg-slate-800/40 rounded-xl hover:bg-slate-800/70 cursor-pointer transition-colors" onclick="location.href='load-data.html'">
+            <div class="w-9 h-9 rounded-xl bg-blue-600/20 flex items-center justify-center text-blue-400 font-bold text-sm flex-shrink-0">1</div>
+            <div><p class="font-semibold text-white text-sm">Load Data</p><p class="text-slate-400 text-xs mt-0.5">Upload Excel workbook with Orders &amp; Coordinates sheets</p></div>
+            <i class="fas fa-chevron-right text-slate-600 ml-auto mt-1"></i>
+          </div>
+          <div class="flex items-start gap-4 p-4 bg-slate-800/40 rounded-xl hover:bg-slate-800/70 cursor-pointer transition-colors" onclick="location.href='orders.html'">
+            <div class="w-9 h-9 rounded-xl bg-emerald-600/20 flex items-center justify-center text-emerald-400 font-bold text-sm flex-shrink-0">2</div>
+            <div><p class="font-semibold text-white text-sm">Browse Orders</p><p class="text-slate-400 text-xs mt-0.5">View all orders and inspect pick list details</p></div>
+            <i class="fas fa-chevron-right text-slate-600 ml-auto mt-1"></i>
+          </div>
+          <div class="flex items-start gap-4 p-4 bg-slate-800/40 rounded-xl hover:bg-slate-800/70 cursor-pointer transition-colors" onclick="location.href='pickers.html'">
+            <div class="w-9 h-9 rounded-xl bg-amber-600/20 flex items-center justify-center text-amber-400 font-bold text-sm flex-shrink-0">3</div>
+            <div><p class="font-semibold text-white text-sm">Assign Pickers</p><p class="text-slate-400 text-xs mt-0.5">Add pickers and assign them to orders</p></div>
+            <i class="fas fa-chevron-right text-slate-600 ml-auto mt-1"></i>
+          </div>
+          <div class="flex items-start gap-4 p-4 bg-slate-800/40 rounded-xl hover:bg-slate-800/70 cursor-pointer transition-colors" onclick="location.href='optimize.html'">
+            <div class="w-9 h-9 rounded-xl bg-purple-600/20 flex items-center justify-center text-purple-400 font-bold text-sm flex-shrink-0">4</div>
+            <div><p class="font-semibold text-white text-sm">Optimize Route</p><p class="text-slate-400 text-xs mt-0.5">Run GA to find shortest picking route</p></div>
+            <i class="fas fa-chevron-right text-slate-600 ml-auto mt-1"></i>
+          </div>
+          <div class="flex items-start gap-4 p-4 bg-slate-800/40 rounded-xl hover:bg-slate-800/70 cursor-pointer transition-colors" onclick="location.href='reports.html'">
+            <div class="w-9 h-9 rounded-xl bg-teal-600/20 flex items-center justify-center text-teal-400 font-bold text-sm flex-shrink-0">5</div>
+            <div><p class="font-semibold text-white text-sm">Export Reports</p><p class="text-slate-400 text-xs mt-0.5">Download Excel or PDF picker route reports</p></div>
+            <i class="fas fa-chevron-right text-slate-600 ml-auto mt-1"></i>
+          </div>
+        </div>
+      </div>
+      <div class="glass-card rounded-2xl p-6" data-aos="fade-up" data-aos-delay="100">
+        <div class="section-header mb-5"><i class="fas fa-circle-info text-blue-400"></i> System Status</div>
+        <div id="statusPanel"></div>
+        <div id="lastBlock" class="hidden mt-5 pt-5 border-t border-slate-800">
+          <p class="text-xs text-slate-500 uppercase font-semibold tracking-wide mb-3">Last Optimized</p>
+          <div id="lastContent"></div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/aos/2.3.4/aos.js"></script>
+<script type="module">
+import{AppState,initUI}from'./assets/js/app.js';
+initUI();
+const res=Object.values(AppState.results);
+const nO=Object.keys(AppState.orders).length;
+const nL=Object.keys(AppState.locations).filter(k=>k!=='0').length;
+const nP=AppState.pickers.length;
+const last=res.length?res[res.length-1]:null;
+const avg=res.length?(res.reduce((s,r)=>s+r.travelTimeMin,0)/res.length).toFixed(2)+' min':'—';
+document.getElementById('kpiOrders').textContent=nO;
+document.getElementById('kpiPickers').textContent=nP;
+document.getElementById('kpiLocs').textContent=nL;
+document.getElementById('kpiPicker').textContent=last?.assignedPicker||'—';
+document.getElementById('kpiTime').textContent=avg;
+if(AppState.dataLoaded){
+  const b=document.getElementById('dataBadge');
+  b.textContent='✓ Data Loaded';b.className='text-xs font-semibold px-3 py-1 rounded-full bg-green-900/30 text-green-400 border border-green-700/40';
+}
+document.getElementById('statusPanel').innerHTML=AppState.dataLoaded
+  ?`<div class="space-y-2 text-sm">
+    <div class="flex justify-between py-2 border-b border-slate-800"><span class="text-slate-400">Orders</span><span class="text-white font-semibold">${nO}</span></div>
+    <div class="flex justify-between py-2 border-b border-slate-800"><span class="text-slate-400">Locations</span><span class="text-white font-semibold">${nL}</span></div>
+    <div class="flex justify-between py-2 border-b border-slate-800"><span class="text-slate-400">Pickers</span><span class="text-white font-semibold">${nP}</span></div>
+    <div class="flex justify-between py-2"><span class="text-slate-400">Routes Done</span><span class="text-white font-semibold">${res.length}</span></div>
+    </div><button onclick="location.href='optimize.html'" class="btn-primary w-full justify-center mt-4 text-sm"><i class="fas fa-route"></i> Go to Optimize</button>`
+  :`<div class="text-center py-6"><div class="w-16 h-16 rounded-2xl bg-slate-800 flex items-center justify-center mx-auto mb-4"><i class="fas fa-database text-slate-600 text-2xl"></i></div><p class="text-slate-400 text-sm mb-4">No data loaded yet.</p><button onclick="location.href='load-data.html'" class="btn-primary text-sm"><i class="fas fa-upload"></i> Load Data</button></div>`;
+if(last){
+  document.getElementById('lastBlock').classList.remove('hidden');
+  document.getElementById('lastContent').innerHTML=`<div class="space-y-1.5 text-sm">
+    <div class="flex justify-between"><span class="text-slate-400">Order</span><span class="text-white font-semibold">${last.orderId}</span></div>
+    <div class="flex justify-between"><span class="text-slate-400">Picker</span><span class="text-white font-semibold">${last.assignedPicker||'—'}</span></div>
+    <div class="flex justify-between"><span class="text-slate-400">Distance</span><span class="text-amber-400 font-semibold">${last.totalDistance.toFixed(1)} m</span></div>
+    <div class="flex justify-between"><span class="text-slate-400">Time</span><span class="text-teal-400 font-semibold">${last.travelTimeMin.toFixed(2)} min</span></div></div>`;
+}
+</script>
+</body></html>

@@ -1,0 +1,161 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/><meta name="viewport" content="width=device-width,initial-scale=1.0"/>
+<title>Load Data — Warehouse Picker System</title>
+<script src="https://cdn.tailwindcss.com"></script>
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css"/>
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/aos/2.3.4/aos.css"/>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet"/>
+<link rel="stylesheet" href="assets/css/style.css"/>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+</head>
+<body>
+<aside id="sidebar">
+  <div class="logo-area"><div class="flex items-center gap-3">
+    <div class="w-10 h-10 rounded-xl bg-blue-600 flex items-center justify-center"><i class="fas fa-warehouse text-white"></i></div>
+    <div><div class="text-white font-bold text-sm">Warehouse</div><div class="text-blue-400 text-xs">Route Optimizer</div></div>
+  </div></div>
+  <nav>
+    <a href="index.html"     data-page="dashboard"><span class="nav-icon"><i class="fas fa-house"></i></span>Dashboard</a>
+    <a href="load-data.html" data-page="load-data"><span class="nav-icon"><i class="fas fa-file-excel"></i></span>Load Data</a>
+    <a href="orders.html"    data-page="orders"><span class="nav-icon"><i class="fas fa-list-check"></i></span>Orders</a>
+    <a href="pickers.html"   data-page="pickers"><span class="nav-icon"><i class="fas fa-hard-hat"></i></span>Pickers</a>
+    <a href="optimize.html"  data-page="optimize"><span class="nav-icon"><i class="fas fa-route"></i></span>Optimize</a>
+    <a href="reports.html"   data-page="reports"><span class="nav-icon"><i class="fas fa-file-pdf"></i></span>Reports</a>
+  </nav>
+  <div class="p-4 border-t border-slate-800"><p class="text-xs text-slate-600 text-center">© 2025 Warehouse Picker System</p></div>
+</aside>
+<div id="sidebarOverlay" class="hidden"></div>
+<div id="main">
+  <div class="topbar">
+    <button id="sidebarToggle" class="lg:hidden mr-3 text-slate-400 hover:text-white"><i class="fas fa-bars text-lg"></i></button>
+    <div><div class="page-title">Load Data</div><div class="page-subtitle">Upload your warehouse Excel workbook</div></div>
+  </div>
+  <div class="page-content">
+    <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+      <div class="lg:col-span-2 space-y-5">
+        <div class="glass-card rounded-2xl p-6" data-aos="fade-up">
+          <div class="section-header mb-5"><i class="fas fa-upload text-blue-400"></i> Upload Excel Workbook</div>
+          <div id="dropZone" class="drop-zone mb-4" onclick="document.getElementById('fileInput').click()">
+            <i class="fas fa-file-excel text-5xl text-blue-400/50 mb-4"></i>
+            <p class="text-slate-300 font-semibold text-lg mb-1">Drag &amp; Drop your Excel file here</p>
+            <p class="text-slate-500 text-sm mb-4">or click to browse</p>
+            <span class="btn-primary text-sm pointer-events-none"><i class="fas fa-folder-open"></i> Browse File</span>
+            <p class="text-slate-600 text-xs mt-3">Accepts .xlsx · .xls</p>
+          </div>
+          <input type="file" id="fileInput" accept=".xlsx,.xls" class="hidden"/>
+          <div id="fileInfo" class="hidden glass-card rounded-xl p-4 mb-4 border border-blue-500/30">
+            <div class="flex items-center gap-3">
+              <i class="fas fa-file-excel text-green-400 text-2xl"></i>
+              <div class="flex-1"><p id="fileName" class="text-white font-semibold text-sm"></p><p id="fileSize" class="text-slate-400 text-xs"></p></div>
+              <button onclick="clearFile()" class="text-slate-500 hover:text-red-400"><i class="fas fa-times"></i></button>
+            </div>
+          </div>
+          <div id="warnBox" class="hidden bg-amber-900/20 border border-amber-700/40 rounded-xl p-4 mb-4">
+            <div class="flex gap-2"><i class="fas fa-triangle-exclamation text-amber-400 mt-0.5 flex-shrink-0"></i><p id="warnText" class="text-amber-300 text-sm"></p></div>
+          </div>
+          <div id="errBox" class="hidden bg-red-900/20 border border-red-700/40 rounded-xl p-4 mb-4">
+            <div class="flex gap-2"><i class="fas fa-circle-xmark text-red-400 mt-0.5 flex-shrink-0"></i><p id="errText" class="text-red-300 text-sm"></p></div>
+          </div>
+          <div class="flex gap-3">
+            <button id="loadBtn" onclick="doLoad()" class="btn-primary flex-1 justify-center" disabled><i class="fas fa-database"></i> Load Data</button>
+            <button onclick="downloadSample()" class="btn-secondary text-sm"><i class="fas fa-download"></i> Sample Excel</button>
+          </div>
+        </div>
+        <div id="resultCard" class="hidden glass-card rounded-2xl p-6" data-aos="fade-up">
+          <div class="section-header mb-5"><i class="fas fa-circle-check text-green-400"></i> Data Loaded Successfully</div>
+          <div class="grid grid-cols-3 gap-4 mb-5">
+            <div class="bg-slate-800/60 rounded-xl p-4 text-center"><div id="resOrders" class="text-3xl font-bold text-blue-400">0</div><div class="text-slate-400 text-xs mt-1">Orders</div></div>
+            <div class="bg-slate-800/60 rounded-xl p-4 text-center"><div id="resLocs" class="text-3xl font-bold text-amber-400">0</div><div class="text-slate-400 text-xs mt-1">Locations</div></div>
+            <div class="bg-slate-800/60 rounded-xl p-4 text-center"><div id="resLines" class="text-3xl font-bold text-emerald-400">0</div><div class="text-slate-400 text-xs mt-1">Lines</div></div>
+          </div>
+          <div id="orderPreview" class="overflow-auto rounded-xl border border-slate-700/50 max-h-60 mb-5"></div>
+          <div class="flex gap-3">
+            <button onclick="location.href='orders.html'" class="btn-primary text-sm"><i class="fas fa-list-check"></i> View Orders</button>
+            <button onclick="location.href='pickers.html'" class="btn-secondary text-sm"><i class="fas fa-hard-hat"></i> Add Pickers</button>
+          </div>
+        </div>
+      </div>
+      <div class="space-y-4">
+        <div class="glass-card rounded-2xl p-5" data-aos="fade-up" data-aos-delay="80">
+          <div class="section-header mb-4"><i class="fas fa-table text-blue-400"></i> Required Sheets</div>
+          <div class="space-y-3 text-sm">
+            <div class="flex items-center justify-between py-2 border-b border-slate-800"><span class="text-slate-300">Warehouse Layout</span><span class="text-xs px-2 py-0.5 rounded-full bg-slate-700 text-slate-400">Optional</span></div>
+            <div class="flex items-center justify-between py-2 border-b border-slate-800"><span class="text-slate-300">Orders</span><span class="text-xs px-2 py-0.5 rounded-full bg-blue-900/50 text-blue-400 border border-blue-700/30">Required</span></div>
+            <div class="flex items-center justify-between py-2"><span class="text-slate-300">Coordinates</span><span class="text-xs px-2 py-0.5 rounded-full bg-blue-900/50 text-blue-400 border border-blue-700/30">Required</span></div>
+          </div>
+        </div>
+        <div class="glass-card rounded-2xl p-5" data-aos="fade-up" data-aos-delay="120">
+          <div class="section-header mb-3"><i class="fas fa-receipt text-blue-400"></i> Orders Sheet</div>
+          <div class="font-mono text-xs text-slate-400 bg-slate-900/70 rounded-lg p-3 leading-relaxed">
+            <div class="text-amber-400 font-bold">ORDER_ID</div>
+            <div>Line | Item | Pick Location</div>
+            <div>1 | Part No. 123 | 57</div>
+            <div>2 | Part No. 456 | 37</div>
+            <div class="text-amber-400 font-bold mt-1">NEXT_ORDER</div>
+            <div>…</div>
+          </div>
+        </div>
+        <div class="glass-card rounded-2xl p-5" data-aos="fade-up" data-aos-delay="160">
+          <div class="section-header mb-3"><i class="fas fa-map text-blue-400"></i> Coordinates Sheet</div>
+          <div class="font-mono text-xs text-slate-400 bg-slate-900/70 rounded-lg p-3 leading-relaxed">
+            <div>Location | X | Y</div>
+            <div>0 | 1 | 0 ← Depot</div>
+            <div>57 | 4 | 12</div>
+            <div>37 | 4 | 7</div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/aos/2.3.4/aos.js"></script>
+<script type="module">
+import{AppState,initUI,saveState}from'./assets/js/app.js';
+import{parseExcelFile,createSampleExcel}from'./assets/js/excel.js';
+import{toast}from'./assets/js/ui.js';
+initUI();
+let buf=null;
+const dz=document.getElementById('dropZone'),fi=document.getElementById('fileInput'),lb=document.getElementById('loadBtn');
+dz.addEventListener('dragover',e=>{e.preventDefault();dz.classList.add('dragging');});
+dz.addEventListener('dragleave',()=>dz.classList.remove('dragging'));
+dz.addEventListener('drop',e=>{e.preventDefault();dz.classList.remove('dragging');if(e.dataTransfer.files[0])handleFile(e.dataTransfer.files[0]);});
+fi.addEventListener('change',()=>{if(fi.files[0])handleFile(fi.files[0]);});
+function handleFile(f){
+  document.getElementById('fileInfo').classList.remove('hidden');
+  document.getElementById('fileName').textContent=f.name;
+  document.getElementById('fileSize').textContent=(f.size/1024).toFixed(1)+' KB';
+  document.getElementById('errBox').classList.add('hidden');
+  document.getElementById('warnBox').classList.add('hidden');
+  lb.disabled=false;
+  const r=new FileReader();r.onload=e=>{buf=e.target.result;};r.readAsArrayBuffer(f);
+}
+window.clearFile=()=>{buf=null;fi.value='';document.getElementById('fileInfo').classList.add('hidden');lb.disabled=true;};
+window.doLoad=async()=>{
+  if(!buf){toast('Select a file first.','warn');return;}
+  lb.disabled=true;lb.innerHTML='<i class="fas fa-spinner fa-spin"></i> Parsing…';
+  try{
+    const{orders,locations,warnings}=await parseExcelFile(buf);
+    AppState.orders=orders;AppState.locations=locations;AppState.dataLoaded=true;AppState.results={};AppState.assignments={};
+    saveState();
+    if(warnings.length){document.getElementById('warnBox').classList.remove('hidden');document.getElementById('warnText').textContent=warnings.join(' | ');}
+    const nO=Object.keys(orders).length,nL=Object.keys(locations).filter(k=>k!=='0').length,nLn=Object.values(orders).reduce((s,o)=>s+o.lines.length,0);
+    document.getElementById('resOrders').textContent=nO;
+    document.getElementById('resLocs').textContent=nL;
+    document.getElementById('resLines').textContent=nLn;
+    document.getElementById('orderPreview').innerHTML=`<table class="w-full text-sm"><thead><tr class="bg-slate-800 text-slate-400 text-xs uppercase"><th class="px-4 py-2 text-left">Order ID</th><th class="px-4 py-2 text-left">Lines</th><th class="px-4 py-2 text-left">Unique Locs</th></tr></thead><tbody>${Object.values(orders).map(o=>`<tr class="border-b border-slate-800 hover:bg-slate-800/40"><td class="px-4 py-2 text-blue-300 font-mono text-sm font-semibold">${o.orderId}</td><td class="px-4 py-2 text-white text-sm">${o.lines.length}</td><td class="px-4 py-2 text-slate-400 text-sm">${new Set(o.lines.map(l=>l.pickLocation)).size}</td></tr>`).join('')}</tbody></table>`;
+    document.getElementById('resultCard').classList.remove('hidden');
+    toast(`Loaded ${nO} orders, ${nL} locations!`,'success');
+  }catch(e){
+    document.getElementById('errBox').classList.remove('hidden');document.getElementById('errText').textContent='Error: '+e.message;
+    toast('Parse failed: '+e.message,'error');
+  }finally{lb.disabled=false;lb.innerHTML='<i class="fas fa-database"></i> Load Data';}
+};
+window.downloadSample=()=>{
+  const arr=createSampleExcel();
+  const a=Object.assign(document.createElement('a'),{href:URL.createObjectURL(new Blob([arr],{type:'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'})),download:'warehouse_sample.xlsx'});
+  a.click();URL.revokeObjectURL(a.href);toast('Sample downloaded!','success');
+};
+</script>
+</body></html>

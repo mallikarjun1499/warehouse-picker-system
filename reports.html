@@ -1,0 +1,179 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/><meta name="viewport" content="width=device-width,initial-scale=1.0"/>
+<title>Reports — Warehouse Picker System</title>
+<script src="https://cdn.tailwindcss.com"></script>
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css"/>
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/aos/2.3.4/aos.css"/>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet"/>
+<link rel="stylesheet" href="assets/css/style.css"/>
+<!-- Report libraries -->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.8.2/jspdf.plugin.autotable.min.js"></script>
+</head>
+<body>
+<aside id="sidebar">
+  <div class="logo-area"><div class="flex items-center gap-3">
+    <div class="w-10 h-10 rounded-xl bg-blue-600 flex items-center justify-center"><i class="fas fa-warehouse text-white"></i></div>
+    <div><div class="text-white font-bold text-sm">Warehouse</div><div class="text-blue-400 text-xs">Route Optimizer</div></div>
+  </div></div>
+  <nav>
+    <a href="index.html"     data-page="dashboard"><span class="nav-icon"><i class="fas fa-house"></i></span>Dashboard</a>
+    <a href="load-data.html" data-page="load-data"><span class="nav-icon"><i class="fas fa-file-excel"></i></span>Load Data</a>
+    <a href="orders.html"    data-page="orders"><span class="nav-icon"><i class="fas fa-list-check"></i></span>Orders</a>
+    <a href="pickers.html"   data-page="pickers"><span class="nav-icon"><i class="fas fa-hard-hat"></i></span>Pickers</a>
+    <a href="optimize.html"  data-page="optimize"><span class="nav-icon"><i class="fas fa-route"></i></span>Optimize</a>
+    <a href="reports.html"   data-page="reports"><span class="nav-icon"><i class="fas fa-file-pdf"></i></span>Reports</a>
+  </nav>
+  <div class="p-4 border-t border-slate-800"><p class="text-xs text-slate-600 text-center">© 2025 Warehouse Picker System</p></div>
+</aside>
+<div id="sidebarOverlay" class="hidden"></div>
+
+<div id="main">
+  <div class="topbar">
+    <button id="sidebarToggle" class="lg:hidden mr-3 text-slate-400 hover:text-white"><i class="fas fa-bars text-lg"></i></button>
+    <div><div class="page-title">Reports</div><div class="page-subtitle">Export picker route reports</div></div>
+  </div>
+  <div class="page-content">
+
+    <!-- No results notice -->
+    <div id="noResults" class="hidden glass-card rounded-2xl p-12 text-center" data-aos="fade-up">
+      <i class="fas fa-file-circle-exclamation text-slate-600 text-5xl mb-5"></i>
+      <p class="text-slate-400 text-lg mb-2">No optimized routes yet</p>
+      <p class="text-slate-500 text-sm mb-6">Run optimization on at least one order first.</p>
+      <button onclick="location.href='optimize.html'" class="btn-primary"><i class="fas fa-route"></i> Go to Optimize</button>
+    </div>
+
+    <div id="reportsContent" class="hidden space-y-6">
+
+      <!-- Export cards -->
+      <div class="grid grid-cols-1 md:grid-cols-2 gap-5" data-aos="fade-up">
+        <!-- Excel -->
+        <div class="glass-card rounded-2xl p-6 bg-gradient-to-br from-emerald-600/10 to-emerald-900/5 border border-emerald-500/20 hover:border-emerald-500/50 transition-all">
+          <div class="flex items-center gap-4 mb-5">
+            <div class="w-14 h-14 rounded-2xl bg-emerald-600/20 flex items-center justify-center flex-shrink-0">
+              <i class="fas fa-file-excel text-emerald-400 text-2xl"></i>
+            </div>
+            <div><h3 class="text-white font-bold text-lg">Excel Report</h3><p class="text-slate-400 text-sm">Multi-sheet workbook</p></div>
+          </div>
+          <ul class="space-y-2 mb-6">
+            <li class="flex items-center gap-2 text-slate-300 text-sm"><i class="fas fa-check text-emerald-400 text-xs w-4"></i>Summary sheet — all orders</li>
+            <li class="flex items-center gap-2 text-slate-300 text-sm"><i class="fas fa-check text-emerald-400 text-xs w-4"></i>Per-order step tables</li>
+            <li class="flex items-center gap-2 text-slate-300 text-sm"><i class="fas fa-check text-emerald-400 text-xs w-4"></i>Picker, Distance, Time, Route</li>
+          </ul>
+          <button onclick="doExcel()" class="btn-primary w-full justify-center" style="background:linear-gradient(135deg,#065f46,#047857);">
+            <i class="fas fa-download"></i> Download Excel
+          </button>
+        </div>
+
+        <!-- PDF -->
+        <div class="glass-card rounded-2xl p-6 bg-gradient-to-br from-red-600/10 to-red-900/5 border border-red-500/20 hover:border-red-500/50 transition-all">
+          <div class="flex items-center gap-4 mb-5">
+            <div class="w-14 h-14 rounded-2xl bg-red-600/20 flex items-center justify-center flex-shrink-0">
+              <i class="fas fa-file-pdf text-red-400 text-2xl"></i>
+            </div>
+            <div><h3 class="text-white font-bold text-lg">PDF Report</h3><p class="text-slate-400 text-sm">Professional printable report</p></div>
+          </div>
+          <ul class="space-y-2 mb-6">
+            <li class="flex items-center gap-2 text-slate-300 text-sm"><i class="fas fa-check text-red-400 text-xs w-4"></i>Summary table — all orders</li>
+            <li class="flex items-center gap-2 text-slate-300 text-sm"><i class="fas fa-check text-red-400 text-xs w-4"></i>Per-order detail + step table</li>
+            <li class="flex items-center gap-2 text-slate-300 text-sm"><i class="fas fa-check text-red-400 text-xs w-4"></i>Route sequence, page numbers</li>
+          </ul>
+          <button onclick="doPDF()" class="btn-primary w-full justify-center" style="background:linear-gradient(135deg,#7f1d1d,#991b1b);">
+            <i class="fas fa-download"></i> Download PDF
+          </button>
+        </div>
+      </div>
+
+      <!-- Preview summary table -->
+      <div class="glass-card rounded-2xl overflow-hidden" data-aos="fade-up">
+        <div class="p-5 border-b border-slate-800">
+          <div class="section-header mb-0"><i class="fas fa-table text-blue-400"></i> Export Preview</div>
+        </div>
+        <div class="overflow-auto">
+          <table class="w-full text-sm">
+            <thead><tr class="bg-slate-800 text-slate-400 text-xs uppercase">
+              <th class="px-4 py-3 text-left">Order ID</th>
+              <th class="px-4 py-3 text-left">Assigned Picker</th>
+              <th class="px-4 py-3 text-center">Pick Locs</th>
+              <th class="px-4 py-3 text-center">Travel Distance</th>
+              <th class="px-4 py-3 text-center">Est. Time</th>
+              <th class="px-4 py-3 text-left">Route</th>
+            </tr></thead>
+            <tbody id="previewBody"></tbody>
+          </table>
+        </div>
+      </div>
+
+      <!-- Expandable per-order detail -->
+      <div id="orderCards" class="space-y-4" data-aos="fade-up"></div>
+
+    </div>
+  </div>
+</div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/aos/2.3.4/aos.js"></script>
+<script type="module">
+import{AppState,initUI}from'./assets/js/app.js';
+import{exportExcel,exportPDF}from'./assets/js/report.js';
+import{routeSequenceHTML,stepTableHTML,toast}from'./assets/js/ui.js';
+initUI();
+
+const results=Object.values(AppState.results);
+
+if(!results.length){
+  document.getElementById('noResults').classList.remove('hidden');
+}else{
+  document.getElementById('reportsContent').classList.remove('hidden');
+
+  // Preview table
+  document.getElementById('previewBody').innerHTML=results.map(r=>`
+    <tr class="border-b border-slate-800 hover:bg-slate-800/40">
+      <td class="px-4 py-3 font-mono text-blue-300 font-semibold">${r.orderId}</td>
+      <td class="px-4 py-3 text-white font-semibold">${r.assignedPicker||'Unassigned'}</td>
+      <td class="px-4 py-3 text-center text-amber-300 font-semibold">${r.numPickLocations}</td>
+      <td class="px-4 py-3 text-center text-emerald-300">${r.totalDistance.toFixed(1)} m</td>
+      <td class="px-4 py-3 text-center text-teal-300">${r.travelTimeMin.toFixed(2)} min</td>
+      <td class="px-4 py-3 text-slate-400 text-xs max-w-xs truncate">${(r.optimizedRoute||[]).map(id=>id===0?'DEPOT':id).join(' → ')}</td>
+    </tr>`).join('');
+
+  // Expandable per-order cards
+  document.getElementById('orderCards').innerHTML=results.map((r,i)=>`
+    <div class="glass-card rounded-2xl overflow-hidden">
+      <button class="w-full p-5 flex items-center justify-between hover:bg-slate-800/40 transition-colors text-left"
+              onclick="toggleCard(${i})">
+        <div class="flex items-center gap-3">
+          <div class="w-9 h-9 rounded-lg bg-blue-600/20 flex items-center justify-center flex-shrink-0">
+            <i class="fas fa-route text-blue-400 text-sm"></i>
+          </div>
+          <div>
+            <p class="text-white font-bold">${r.orderId}</p>
+            <p class="text-slate-400 text-xs">${r.assignedPicker||'Unassigned'} · ${r.totalDistance.toFixed(1)} m · ${r.travelTimeMin.toFixed(2)} min</p>
+          </div>
+        </div>
+        <i id="chevron${i}" class="fas fa-chevron-down text-slate-500 transition-transform"></i>
+      </button>
+      <div id="card${i}" class="hidden border-t border-slate-800 p-5">
+        <div class="mb-4">
+          <p class="text-xs text-slate-500 uppercase font-semibold mb-2">Optimized Picking Sequence</p>
+          <div class="flex flex-wrap items-center gap-1.5">${routeSequenceHTML(r.optimizedRoute)}</div>
+        </div>
+        <p class="text-xs text-slate-500 uppercase font-semibold mb-2">Step Table</p>
+        <div class="overflow-auto rounded-xl border border-slate-700/50">${stepTableHTML(r.steps)}</div>
+      </div>
+    </div>`).join('');
+}
+
+window.toggleCard=function(i){
+  const card=document.getElementById('card'+i);
+  const chev=document.getElementById('chevron'+i);
+  card.classList.toggle('hidden');
+  chev.style.transform=card.classList.contains('hidden')?'':'rotate(180deg)';
+};
+
+window.doExcel=function(){exportExcel(Object.values(AppState.results));};
+window.doPDF=function(){exportPDF(Object.values(AppState.results));};
+</script>
+</body></html>

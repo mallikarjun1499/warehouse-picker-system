@@ -1,0 +1,123 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/><meta name="viewport" content="width=device-width,initial-scale=1.0"/>
+<title>Orders — Warehouse Picker System</title>
+<script src="https://cdn.tailwindcss.com"></script>
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css"/>
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/aos/2.3.4/aos.css"/>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet"/>
+<link rel="stylesheet" href="assets/css/style.css"/>
+</head>
+<body>
+<aside id="sidebar">
+  <div class="logo-area"><div class="flex items-center gap-3">
+    <div class="w-10 h-10 rounded-xl bg-blue-600 flex items-center justify-center"><i class="fas fa-warehouse text-white"></i></div>
+    <div><div class="text-white font-bold text-sm">Warehouse</div><div class="text-blue-400 text-xs">Route Optimizer</div></div>
+  </div></div>
+  <nav>
+    <a href="index.html"     data-page="dashboard"><span class="nav-icon"><i class="fas fa-house"></i></span>Dashboard</a>
+    <a href="load-data.html" data-page="load-data"><span class="nav-icon"><i class="fas fa-file-excel"></i></span>Load Data</a>
+    <a href="orders.html"    data-page="orders"><span class="nav-icon"><i class="fas fa-list-check"></i></span>Orders</a>
+    <a href="pickers.html"   data-page="pickers"><span class="nav-icon"><i class="fas fa-hard-hat"></i></span>Pickers</a>
+    <a href="optimize.html"  data-page="optimize"><span class="nav-icon"><i class="fas fa-route"></i></span>Optimize</a>
+    <a href="reports.html"   data-page="reports"><span class="nav-icon"><i class="fas fa-file-pdf"></i></span>Reports</a>
+  </nav>
+  <div class="p-4 border-t border-slate-800"><p class="text-xs text-slate-600 text-center">© 2025 Warehouse Picker System</p></div>
+</aside>
+<div id="sidebarOverlay" class="hidden"></div>
+<div id="main">
+  <div class="topbar">
+    <button id="sidebarToggle" class="lg:hidden mr-3 text-slate-400 hover:text-white"><i class="fas fa-bars text-lg"></i></button>
+    <div><div class="page-title">Orders</div><div class="page-subtitle">Browse and manage warehouse orders</div></div>
+  </div>
+  <div class="page-content">
+    <div id="noData" class="hidden glass-card rounded-2xl p-12 text-center" data-aos="fade-up">
+      <i class="fas fa-database text-slate-600 text-5xl mb-5"></i>
+      <p class="text-slate-400 text-lg mb-2">No data loaded</p>
+      <button onclick="location.href='load-data.html'" class="btn-primary mt-4"><i class="fas fa-upload"></i> Load Data</button>
+    </div>
+    <div id="ordersContent" class="hidden">
+      <div class="flex flex-wrap gap-3 mb-5" data-aos="fade-up">
+        <div class="relative flex-1 min-w-48">
+          <i class="fas fa-search absolute left-3 top-1/2 -translate-y-1/2 text-slate-500 text-sm"></i>
+          <input id="searchInput" type="text" placeholder="Search orders..." class="form-input pl-9"/>
+        </div>
+        <select id="statusFilter" class="form-select w-44">
+          <option value="all">All Status</option>
+          <option value="optimized">Optimized</option>
+          <option value="pending">Pending</option>
+        </select>
+        <div class="flex items-center px-4 py-2 rounded-xl bg-slate-800 border border-slate-700">
+          <span id="orderCount" class="text-slate-400 text-sm font-medium">0 orders</span>
+        </div>
+      </div>
+      <div class="grid grid-cols-1 lg:grid-cols-2 gap-5">
+        <div class="glass-card rounded-2xl overflow-hidden" data-aos="fade-up">
+          <div class="p-4 border-b border-slate-800"><span class="font-semibold text-white text-sm"><i class="fas fa-list text-blue-400 mr-2"></i>Order List</span></div>
+          <div id="orderList" class="divide-y divide-slate-800/70 overflow-y-auto" style="max-height:580px;"></div>
+        </div>
+        <div class="glass-card rounded-2xl overflow-hidden" data-aos="fade-up" data-aos-delay="60">
+          <div class="p-4 border-b border-slate-800"><span class="font-semibold text-white text-sm"><i class="fas fa-magnifying-glass text-blue-400 mr-2"></i>Order Detail</span></div>
+          <div id="detailContent" class="p-8 text-center"><i class="fas fa-hand-pointer text-slate-700 text-4xl mb-4"></i><p class="text-slate-500 text-sm">Select an order from the list</p></div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/aos/2.3.4/aos.js"></script>
+<script type="module">
+import{AppState,initUI,getPickerForOrder}from'./assets/js/app.js';
+import{assignPicker}from'./assets/js/picker.js';
+import{toast}from'./assets/js/ui.js';
+initUI();
+const orders=AppState.orders,ids=Object.keys(orders);
+if(!AppState.dataLoaded||!ids.length){document.getElementById('noData').classList.remove('hidden');}
+else{document.getElementById('ordersContent').classList.remove('hidden');render(ids);}
+
+function render(list){
+  document.getElementById('orderCount').textContent=list.length+' order'+(list.length!==1?'s':'');
+  document.getElementById('orderList').innerHTML=!list.length
+    ?'<p class="p-6 text-slate-500 text-sm text-center">No orders match.</p>'
+    :list.map(id=>{
+      const o=orders[id],pk=getPickerForOrder(id),done=!!AppState.results[id],uniq=new Set(o.lines.map(l=>l.pickLocation)).size;
+      return`<div class="order-row flex items-center gap-3 px-4 py-3 hover:bg-slate-800/60 cursor-pointer transition-colors" data-id="${id}" onclick="selOrder('${id}')">
+        <div class="w-9 h-9 rounded-lg bg-blue-600/20 flex items-center justify-center flex-shrink-0"><i class="fas fa-box text-blue-400 text-sm"></i></div>
+        <div class="flex-1 min-w-0"><p class="text-white font-semibold text-sm truncate">${id}</p><p class="text-slate-500 text-xs">${o.lines.length} lines · ${uniq} locs</p></div>
+        <div class="flex flex-col items-end gap-1 flex-shrink-0">${done?'<span class="badge-available">Done</span>':'<span class="badge-pending">Pending</span>'}${pk!=='Unassigned'?`<span class="text-xs text-slate-500 truncate max-w-[90px]">${pk}</span>`:''}</div></div>`;
+    }).join('');
+}
+
+window.selOrder=function(id){
+  document.querySelectorAll('.order-row').forEach(r=>r.classList.remove('bg-blue-900/20'));
+  document.querySelector(`.order-row[data-id="${id}"]`)?.classList.add('bg-blue-900/20');
+  const o=orders[id],pk=getPickerForOrder(id),res=AppState.results[id],uniq=[...new Set(o.lines.map(l=>l.pickLocation))];
+  const pOpts=AppState.pickers.map(p=>`<option value="${p.name}"${p.name===pk?' selected':''}>${p.name}</option>`).join('');
+  const rows=o.lines.map(l=>`<tr class="border-b border-slate-800/60 hover:bg-slate-800/30"><td class="px-3 py-2 text-slate-400 text-xs text-center">${l.line}</td><td class="px-3 py-2 text-slate-300 text-xs">${l.item}</td><td class="px-3 py-2 text-amber-300 font-mono text-xs text-center font-semibold">${l.pickLocation}</td></tr>`).join('');
+  document.getElementById('detailContent').innerHTML=`<div class="p-5">
+    <div class="flex items-start justify-between mb-4"><div><h3 class="text-white font-bold text-lg">${id}</h3><p class="text-slate-500 text-xs">${o.lines.length} lines · ${uniq.length} unique locs</p></div>${res?'<span class="badge-available">Optimized</span>':'<span class="badge-pending">Pending</span>'}</div>
+    <div class="grid grid-cols-3 gap-3 mb-4">
+      <div class="bg-slate-800/60 rounded-xl p-3 text-center"><div class="text-2xl font-bold text-blue-400">${o.lines.length}</div><div class="text-slate-500 text-xs mt-1">Lines</div></div>
+      <div class="bg-slate-800/60 rounded-xl p-3 text-center"><div class="text-2xl font-bold text-amber-400">${uniq.length}</div><div class="text-slate-500 text-xs mt-1">Locations</div></div>
+      <div class="bg-slate-800/60 rounded-xl p-3 text-center"><div class="text-sm font-bold ${pk!=='Unassigned'?'text-green-400':'text-slate-500'} truncate">${pk!=='Unassigned'?pk:'—'}</div><div class="text-slate-500 text-xs mt-1">Picker</div></div>
+    </div>
+    ${res?`<div class="bg-teal-900/20 border border-teal-700/30 rounded-xl p-3 mb-4"><div class="flex justify-between text-sm"><span class="text-teal-300"><i class="fas fa-road mr-1"></i>${res.totalDistance.toFixed(1)} m</span><span class="text-teal-400"><i class="fas fa-clock mr-1"></i>${res.travelTimeMin.toFixed(2)} min</span></div></div>`:''}
+    ${AppState.pickers.length?`<div class="flex gap-2 mb-4"><select id="pSel_${id}" class="form-select flex-1 text-sm"><option value="">Assign Picker</option>${pOpts}</select><button onclick="doAssign('${id}')" class="btn-primary text-sm px-4"><i class="fas fa-link"></i></button></div>`:`<div class="bg-slate-800/40 border border-slate-700/40 rounded-xl p-3 mb-4 text-center"><p class="text-slate-500 text-xs"><a href="pickers.html" class="text-blue-400 hover:underline">Add pickers</a> to enable assignment</p></div>`}
+    <button onclick="location.href='optimize.html?order=${id}'" class="btn-primary w-full justify-center mb-4 text-sm"><i class="fas fa-route"></i> Optimize This Order</button>
+    <div class="overflow-auto max-h-56 rounded-xl border border-slate-700/50"><table class="w-full text-xs"><thead><tr class="bg-slate-800 text-slate-400 uppercase"><th class="px-3 py-2 text-center">Line</th><th class="px-3 py-2 text-left">Item</th><th class="px-3 py-2 text-center">Pick Loc</th></tr></thead><tbody>${rows}</tbody></table></div>
+  </div>`;
+};
+window.doAssign=function(id){
+  const s=document.getElementById('pSel_'+id);if(!s?.value){toast('Select a picker.','warn');return;}
+  assignPicker(id,s.value);toast(s.value+' → '+id,'success');window.selOrder(id);render(filtered());
+};
+function filtered(){
+  const q=document.getElementById('searchInput').value.toLowerCase(),st=document.getElementById('statusFilter').value;
+  return ids.filter(id=>{const mQ=id.toLowerCase().includes(q);const mS=st==='all'||(st==='optimized'?!!AppState.results[id]:!AppState.results[id]);return mQ&&mS;});
+}
+document.getElementById('searchInput').addEventListener('input',()=>render(filtered()));
+document.getElementById('statusFilter').addEventListener('change',()=>render(filtered()));
+const p=new URLSearchParams(location.search).get('order');
+if(p&&orders[p])window.selOrder(p);
+</script>
+</body></html>

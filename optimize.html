@@ -1,0 +1,451 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1.0"/>
+<title>Optimize — Warehouse Picker System</title>
+<script src="https://cdn.tailwindcss.com"></script>
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css"/>
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/aos/2.3.4/aos.css"/>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet"/>
+<link rel="stylesheet" href="assets/css/style.css"/>
+</head>
+<body>
+
+<aside id="sidebar">
+  <div class="logo-area">
+    <div class="flex items-center gap-3">
+      <div class="w-10 h-10 rounded-xl bg-blue-600 flex items-center justify-center"><i class="fas fa-warehouse text-white"></i></div>
+      <div><div class="text-white font-bold text-sm">Warehouse</div><div class="text-blue-400 text-xs">Route Optimizer</div></div>
+    </div>
+  </div>
+  <nav>
+    <a href="index.html"     data-page="dashboard"><span class="nav-icon"><i class="fas fa-house"></i></span>Dashboard</a>
+    <a href="load-data.html" data-page="load-data"><span class="nav-icon"><i class="fas fa-file-excel"></i></span>Load Data</a>
+    <a href="orders.html"    data-page="orders"><span class="nav-icon"><i class="fas fa-list-check"></i></span>Orders</a>
+    <a href="pickers.html"   data-page="pickers"><span class="nav-icon"><i class="fas fa-hard-hat"></i></span>Pickers</a>
+    <a href="optimize.html"  data-page="optimize"><span class="nav-icon"><i class="fas fa-route"></i></span>Optimize</a>
+    <a href="reports.html"   data-page="reports"><span class="nav-icon"><i class="fas fa-file-pdf"></i></span>Reports</a>
+  </nav>
+  <!-- GA Parameters -->
+  <div class="px-4 pb-5 border-t border-slate-800 pt-4 space-y-3">
+    <p class="text-xs text-slate-500 font-semibold uppercase tracking-wider">GA Parameters</p>
+    <div>
+      <label class="text-xs text-slate-500">Population: <span id="lPop" class="text-white font-semibold">50</span></label>
+      <input type="range" id="sPop" min="10" max="200" value="50" class="w-full mt-1 accent-blue-500" oninput="syncGA()"/>
+    </div>
+    <div>
+      <label class="text-xs text-slate-500">Max Gen: <span id="lGen" class="text-white font-semibold">200</span></label>
+      <input type="range" id="sGen" min="50" max="500" value="200" class="w-full mt-1 accent-blue-500" oninput="syncGA()"/>
+    </div>
+    <div>
+      <label class="text-xs text-slate-500">Crossover: <span id="lCross" class="text-white font-semibold">0.85</span></label>
+      <input type="range" id="sCross" min="50" max="100" value="85" class="w-full mt-1 accent-blue-500" oninput="syncGA()"/>
+    </div>
+    <div>
+      <label class="text-xs text-slate-500">Mutation: <span id="lMut" class="text-white font-semibold">0.15</span></label>
+      <input type="range" id="sMut" min="1" max="50" value="15" class="w-full mt-1 accent-blue-500" oninput="syncGA()"/>
+    </div>
+    <div>
+      <label class="text-xs text-slate-500 block mb-1">Walking Speed (m/min)</label>
+      <input type="number" id="walkSpeed" value="84" min="10" max="300" class="form-input text-sm"/>
+    </div>
+    <p class="text-xs text-slate-600 text-center pt-1">© 2025 Warehouse Picker System</p>
+  </div>
+</aside>
+<div id="sidebarOverlay" class="hidden"></div>
+
+<div id="main">
+  <div class="topbar">
+    <button id="sidebarToggle" class="lg:hidden mr-3 text-slate-400 hover:text-white"><i class="fas fa-bars text-lg"></i></button>
+    <div><div class="page-title">Optimize</div><div class="page-subtitle">Genetic Algorithm Route Optimization Engine</div></div>
+  </div>
+
+  <div class="page-content">
+
+    <!-- No data -->
+    <div id="noData" class="hidden glass-card rounded-2xl p-12 text-center" data-aos="fade-up">
+      <i class="fas fa-database text-slate-600 text-5xl mb-5"></i>
+      <p class="text-slate-400 text-lg mb-2">No data loaded</p>
+      <p class="text-slate-500 text-sm mb-6">Upload an Excel workbook to get started.</p>
+      <button onclick="location.href='load-data.html'" class="btn-primary"><i class="fas fa-upload"></i> Load Data</button>
+    </div>
+
+    <!-- Main -->
+    <div id="mainContent" class="hidden space-y-6">
+
+      <!-- Controls -->
+      <div class="glass-card rounded-2xl p-6" data-aos="fade-up">
+        <div class="section-header mb-5"><i class="fas fa-sliders text-blue-400"></i> Route Optimization Engine</div>
+        <div class="flex flex-wrap gap-4 items-end">
+          <div class="flex-1 min-w-52">
+            <label class="form-label">Select Order</label>
+            <select id="orderSel" class="form-select"></select>
+          </div>
+          <div class="min-w-44">
+            <label class="form-label">Assigned Picker</label>
+            <div id="pickerDisp" class="form-input" style="color:#64748b;cursor:default;pointer-events:none;">Unassigned</div>
+          </div>
+          <button id="btnSingle" class="btn-primary px-8 py-3 text-sm">
+            <i class="fas fa-dna"></i> Optimize Route
+          </button>
+          <button id="btnAll" class="btn-secondary px-6 py-3 text-sm">
+            <i class="fas fa-bolt"></i> Optimize All Orders
+          </button>
+        </div>
+        <!-- Inline progress -->
+        <div id="progressWrap" class="hidden mt-5">
+          <div class="flex justify-between mb-1">
+            <span id="progressLabel" class="text-slate-400 text-xs">Running…</span>
+            <span id="progressPct" class="text-blue-400 text-xs font-semibold">0%</span>
+          </div>
+          <div class="w-full bg-slate-800 rounded-full h-2">
+            <div id="progressBar" class="bg-blue-500 h-2 rounded-full transition-all duration-150" style="width:0%"></div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Results (revealed after first run) -->
+      <div id="resultsSection" class="hidden space-y-6">
+
+        <!-- 5 KPI cards -->
+        <div class="grid grid-cols-2 lg:grid-cols-5 gap-4" data-aos="fade-up">
+          <div class="glass-card rounded-2xl p-5 bg-gradient-to-br from-purple-600/20 to-purple-900/10 border border-purple-500/30">
+            <div class="flex items-center gap-2 mb-2"><i class="fas fa-hard-hat text-purple-400 text-xs"></i><span class="text-slate-400 text-xs font-semibold uppercase tracking-wide">Assigned Picker</span></div>
+            <div id="rPicker" class="text-xl font-bold text-white truncate">—</div>
+          </div>
+          <div class="glass-card rounded-2xl p-5 bg-gradient-to-br from-blue-600/20 to-blue-900/10 border border-blue-500/30">
+            <div class="flex items-center gap-2 mb-2"><i class="fas fa-box text-blue-400 text-xs"></i><span class="text-slate-400 text-xs font-semibold uppercase tracking-wide">Current Order</span></div>
+            <div id="rOrder" class="text-xl font-bold text-white truncate">—</div>
+          </div>
+          <div class="glass-card rounded-2xl p-5 bg-gradient-to-br from-amber-600/20 to-amber-900/10 border border-amber-500/30">
+            <div class="flex items-center gap-2 mb-2"><i class="fas fa-location-dot text-amber-400 text-xs"></i><span class="text-slate-400 text-xs font-semibold uppercase tracking-wide">Pick Locations</span></div>
+            <div id="rLocs" class="text-3xl font-bold text-white">—</div>
+          </div>
+          <div class="glass-card rounded-2xl p-5 bg-gradient-to-br from-emerald-600/20 to-emerald-900/10 border border-emerald-500/30">
+            <div class="flex items-center gap-2 mb-2"><i class="fas fa-road text-emerald-400 text-xs"></i><span class="text-slate-400 text-xs font-semibold uppercase tracking-wide">Travel Distance</span></div>
+            <div id="rDist" class="text-3xl font-bold text-white">—</div>
+          </div>
+          <div class="glass-card rounded-2xl p-5 bg-gradient-to-br from-teal-600/20 to-teal-900/10 border border-teal-500/30">
+            <div class="flex items-center gap-2 mb-2"><i class="fas fa-clock text-teal-400 text-xs"></i><span class="text-slate-400 text-xs font-semibold uppercase tracking-wide">Est. Travel Time</span></div>
+            <div id="rTime" class="text-3xl font-bold text-white">—</div>
+          </div>
+        </div>
+
+        <!-- Route Sequence -->
+        <div class="glass-card rounded-2xl p-6" data-aos="fade-up">
+          <div class="section-header mb-4"><i class="fas fa-list-ol text-blue-400"></i> Optimized Picking Sequence</div>
+          <div id="routeSeq" class="flex flex-wrap items-center gap-1.5 min-h-8"></div>
+        </div>
+
+        <!-- Step Table + Map -->
+        <div class="grid grid-cols-1 xl:grid-cols-2 gap-6">
+          <div class="glass-card rounded-2xl overflow-hidden" data-aos="fade-up">
+            <div class="p-5 border-b border-slate-800">
+              <div class="section-header mb-0"><i class="fas fa-table-list text-blue-400"></i> Picker Step Table</div>
+            </div>
+            <div id="stepTbl" class="overflow-auto" style="max-height:460px;"></div>
+          </div>
+          <div class="glass-card rounded-2xl p-5" data-aos="fade-up" data-aos-delay="60">
+            <div class="section-header mb-3"><i class="fas fa-map text-blue-400"></i> Warehouse Map</div>
+            <div class="flex items-center gap-5 text-xs text-slate-500 mb-3">
+              <span><span style="display:inline-block;width:10px;height:10px;background:#f59e0b;border-radius:2px;margin-right:4px;vertical-align:middle;"></span>Pick Location</span>
+              <span><span style="display:inline-block;width:11px;height:11px;background:#3b82f6;border-radius:50%;margin-right:4px;vertical-align:middle;"></span>Step #</span>
+              <span class="text-emerald-400 font-bold mr-1">★</span><span>Depot</span>
+            </div>
+            <canvas id="warehouseMap" style="width:100%;height:420px;display:block;border-radius:10px;border:1px solid #1e293b;background:#0f172a;"></canvas>
+          </div>
+        </div>
+
+        <!-- Actions -->
+        <div class="flex flex-wrap gap-3" data-aos="fade-up">
+          <button onclick="location.href='reports.html'" class="btn-primary"><i class="fas fa-file-export"></i> Export Report</button>
+          <button onclick="location.href='pickers.html'" class="btn-secondary"><i class="fas fa-hard-hat"></i> Manage Pickers</button>
+          <button onclick="location.href='orders.html'" class="btn-secondary"><i class="fas fa-list-check"></i> Back to Orders</button>
+        </div>
+      </div>
+
+    </div><!-- /mainContent -->
+  </div>
+</div>
+
+<!-- Loading overlay (self-contained, no dependency on ui.js showLoading) -->
+<div id="loadingOverlay" style="display:none;position:fixed;inset:0;z-index:9000;align-items:center;justify-content:center;background:rgba(10,15,30,.93);backdrop-filter:blur(6px);">
+  <div style="text-align:center;">
+    <div style="position:relative;width:72px;height:72px;margin:0 auto 18px;">
+      <div style="position:absolute;inset:0;border-radius:50%;border:4px solid rgba(59,130,246,.15);"></div>
+      <div id="spinRing" style="position:absolute;inset:0;border-radius:50%;border:4px solid transparent;border-top-color:#3b82f6;"></div>
+    </div>
+    <p id="loadMsg" style="color:#f1f5f9;font-weight:700;font-size:17px;margin-bottom:7px;font-family:Inter,sans-serif;">Optimizing…</p>
+    <p id="loadDet" style="color:#64748b;font-size:13px;font-family:Inter,sans-serif;">Starting Genetic Algorithm…</p>
+  </div>
+</div>
+
+<style>
+@keyframes _wspin{to{transform:rotate(360deg)}}
+#spinRing{animation:_wspin .8s linear infinite;}
+</style>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/aos/2.3.4/aos.js"></script>
+<script type="module">
+// ── Imports ──────────────────────────────────────────────────────────────────
+import { AppState, initUI, saveState, getPickerForOrder } from './assets/js/app.js';
+import { optimizeRoute } from './assets/js/algorithm.js';
+import { routeSequenceHTML, stepTableHTML, drawWarehouseMap, toast } from './assets/js/ui.js';
+
+// ── Init ─────────────────────────────────────────────────────────────────────
+initUI();
+
+// Expose syncGA to oninput
+window.syncGA = function () {
+  const pop   = +document.getElementById('sPop').value;
+  const gen   = +document.getElementById('sGen').value;
+  const cross = +document.getElementById('sCross').value / 100;
+  const mut   = +document.getElementById('sMut').value  / 100;
+  document.getElementById('lPop').textContent   = pop;
+  document.getElementById('lGen').textContent   = gen;
+  document.getElementById('lCross').textContent = cross.toFixed(2);
+  document.getElementById('lMut').textContent   = mut.toFixed(2);
+  Object.assign(AppState.gaOptions, { popSize:pop, maxGen:gen, crossoverProb:cross, mutationProb:mut });
+};
+
+// ── Heal locations: ensure loc_id is present (may be lost after JSON round-trip) ──
+function healLocations(locs) {
+  Object.entries(locs).forEach(([k, v]) => {
+    if (v.loc_id === undefined || v.loc_id === null) v.loc_id = Number(k);
+    v.x     = Number(v.x)     || 0;
+    v.y     = Number(v.y)     || 0;
+    v.aisle = Number(v.aisle) || Number(v.x) || 0;
+  });
+}
+
+// ── Page setup ────────────────────────────────────────────────────────────────
+if (!AppState.dataLoaded || !Object.keys(AppState.orders).length) {
+  document.getElementById('noData').classList.remove('hidden');
+} else {
+  healLocations(AppState.locations);
+  document.getElementById('mainContent').classList.remove('hidden');
+
+  // Populate dropdown
+  const sel = document.getElementById('orderSel');
+  Object.keys(AppState.orders).forEach(id => {
+    const opt = document.createElement('option');
+    opt.value = opt.textContent = id;
+    sel.appendChild(opt);
+  });
+
+  // Pre-select from ?order= param
+  const urlOrder = new URLSearchParams(location.search).get('order');
+  if (urlOrder && AppState.orders[urlOrder]) sel.value = urlOrder;
+
+  // Update picker display when order changes
+  sel.addEventListener('change', updatePickerDisplay);
+  updatePickerDisplay();
+
+  // Wire buttons
+  document.getElementById('btnSingle').addEventListener('click', doOptimizeSingle);
+  document.getElementById('btnAll').addEventListener('click', doOptimizeAll);
+
+  // Show cached result for pre-selected order
+  const initId = sel.value;
+  if (initId && AppState.results[initId]) renderResult(AppState.results[initId]);
+}
+
+// ── Update picker display ────────────────────────────────────────────────────
+function updatePickerDisplay() {
+  const id     = document.getElementById('orderSel').value;
+  const picker = id ? getPickerForOrder(id) : 'Unassigned';
+  const el     = document.getElementById('pickerDisp');
+  el.textContent = picker;
+  el.style.color = picker !== 'Unassigned' ? '#f1f5f9' : '#64748b';
+}
+
+// ── Single order optimization ─────────────────────────────────────────────────
+async function doOptimizeSingle() {
+  const orderId = document.getElementById('orderSel').value;
+  if (!orderId) { toast('Select an order first.', 'warn'); return; }
+  setBusy(true);
+  try {
+    const result = await runOptimization(orderId);
+    if (result) renderResult(result);
+  } finally {
+    setBusy(false);
+  }
+}
+
+// ── Optimize all orders ───────────────────────────────────────────────────────
+async function doOptimizeAll() {
+  const ids = Object.keys(AppState.orders);
+  if (!ids.length) { toast('No orders loaded.', 'warn'); return; }
+  setBusy(true);
+  showProgress('Starting…', 0);
+  try {
+    for (let i = 0; i < ids.length; i++) {
+      const id = ids[i];
+      setProgress(`Optimizing ${id} (${i + 1} / ${ids.length})`, Math.round(i / ids.length * 100));
+      await runOptimization(id);
+      await tick(); // let browser breathe
+    }
+    setProgress('All orders optimized!', 100);
+    await sleep(500);
+    // Render current selection
+    const cur = document.getElementById('orderSel').value;
+    if (cur && AppState.results[cur]) renderResult(AppState.results[cur]);
+    toast(`Optimized ${ids.length} order${ids.length !== 1 ? 's' : ''}!`, 'success');
+  } finally {
+    setBusy(false);
+    hideProgress();
+  }
+}
+
+// ── Core: run GA for one order, store result, return it ──────────────────────
+async function runOptimization(orderId) {
+  const order = AppState.orders[orderId];
+  if (!order) return null;
+
+  const pickLocIds = [...new Set(order.lines.map(l => l.pickLocation))];
+  if (!pickLocIds.length) {
+    toast('No pick locations in order ' + orderId, 'error');
+    return null;
+  }
+
+  const speed  = +document.getElementById('walkSpeed').value || 84;
+  const picker = getPickerForOrder(orderId);
+  const gaOpts = Object.assign({}, AppState.gaOptions);
+
+  showOverlay('Optimizing ' + orderId + '…');
+  await tick(); // flush DOM so overlay appears
+
+  let result = null;
+  try {
+    // optimizeRoute is synchronous but we've already painted the overlay
+    result = optimizeRoute(pickLocIds, AppState.locations, gaOpts, null);
+
+    // Recalculate times with user walking speed (default 84 m/min matches Python)
+    result.travelTimeMin = result.totalDistance / speed;
+    result.steps.forEach(s => { s.timeSec = (s.distanceM / speed) * 60; });
+    result.orderId        = orderId;
+    result.assignedPicker = picker;
+
+    // Persist
+    AppState.results[orderId] = result;
+    saveState();
+    if (orderId === document.getElementById('orderSel').value) {
+      toast('Route optimized!', 'success');
+    }
+  } catch (err) {
+    console.error('GA error for ' + orderId + ':', err);
+    toast('Error: ' + err.message, 'error');
+  } finally {
+    hideOverlay();
+  }
+  return result;
+}
+
+// ── Render results ────────────────────────────────────────────────────────────
+function renderResult(r) {
+  // Validate result has required fields
+  if (!r || !r.optimizedRoute || !r.steps) {
+    console.error('renderResult: invalid result', r);
+    toast('Result data is invalid.', 'error');
+    return;
+  }
+
+  // Show the results block
+  document.getElementById('resultsSection').classList.remove('hidden');
+
+  // KPI cards
+  document.getElementById('rPicker').textContent = r.assignedPicker || 'Unassigned';
+  document.getElementById('rOrder').textContent  = r.orderId        || '—';
+  document.getElementById('rLocs').textContent   = r.numPickLocations;
+  document.getElementById('rDist').textContent   = r.totalDistance.toFixed(1) + ' m';
+  document.getElementById('rTime').textContent   = r.travelTimeMin.toFixed(2)  + ' min';
+
+  // Route sequence badges
+  document.getElementById('routeSeq').innerHTML = routeSequenceHTML(r.optimizedRoute);
+
+  // Step table
+  document.getElementById('stepTbl').innerHTML = stepTableHTML(r.steps);
+
+  // Warehouse map
+  drawMap(r.optimizedRoute);
+
+  // Smooth scroll to results
+  document.getElementById('resultsSection').scrollIntoView({ behavior: 'smooth', block: 'start' });
+}
+
+// ── Draw warehouse map (with canvas sizing fix) ───────────────────────────────
+function drawMap(route) {
+  const canvas = document.getElementById('warehouseMap');
+  if (!canvas) return;
+
+  // Must set pixel dimensions BEFORE getContext or drawing
+  const styleW = canvas.offsetWidth  || canvas.clientWidth  || 680;
+  const styleH = canvas.offsetHeight || canvas.clientHeight || 420;
+  canvas.width  = styleW;
+  canvas.height = styleH;
+
+  try {
+    drawWarehouseMap(canvas, AppState.locations, route);
+  } catch (err) {
+    console.error('drawWarehouseMap error:', err);
+    // Fallback: show error on canvas
+    const ctx = canvas.getContext('2d');
+    ctx.fillStyle = '#0f172a'; ctx.fillRect(0,0,canvas.width,canvas.height);
+    ctx.fillStyle = '#ef4444'; ctx.font = '14px Inter,sans-serif';
+    ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+    ctx.fillText('Map render error: ' + err.message, canvas.width/2, canvas.height/2);
+  }
+}
+
+// ── Loading overlay helpers (self-contained, avoids ui.js dependency issues) ──
+function showOverlay(msg) {
+  document.getElementById('loadMsg').textContent = msg || 'Optimizing…';
+  document.getElementById('loadDet').textContent = 'Running Genetic Algorithm…';
+  document.getElementById('loadingOverlay').style.display = 'flex';
+}
+function hideOverlay() {
+  document.getElementById('loadingOverlay').style.display = 'none';
+}
+
+// ── Progress bar helpers ──────────────────────────────────────────────────────
+function showProgress(label, pct) {
+  document.getElementById('progressWrap').classList.remove('hidden');
+  setProgress(label, pct);
+}
+function setProgress(label, pct) {
+  document.getElementById('progressLabel').textContent = label;
+  document.getElementById('progressPct').textContent   = pct + '%';
+  document.getElementById('progressBar').style.width   = pct + '%';
+}
+function hideProgress() {
+  document.getElementById('progressWrap').classList.add('hidden');
+  document.getElementById('progressBar').style.width = '0%';
+}
+
+// ── Button busy state ─────────────────────────────────────────────────────────
+function setBusy(busy) {
+  const s = document.getElementById('btnSingle');
+  const a = document.getElementById('btnAll');
+  if (busy) {
+    s.disabled = true;  a.disabled = true;
+    s.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Running…';
+  } else {
+    s.disabled = false; a.disabled = false;
+    s.innerHTML = '<i class="fas fa-dna"></i> Optimize Route';
+  }
+}
+
+// ── Utilities ────────────────────────────────────────────────────────────────
+function tick()  { return new Promise(r => setTimeout(r, 30)); }
+function sleep(ms){ return new Promise(r => setTimeout(r, ms)); }
+
+// ── Redraw map on window resize ───────────────────────────────────────────────
+window.addEventListener('resize', () => {
+  const id = document.getElementById('orderSel')?.value;
+  if (!id || !AppState.results[id]) return;
+  drawMap(AppState.results[id].optimizedRoute);
+});
+</script>
+</body>
+</html>

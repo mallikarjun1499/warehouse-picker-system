@@ -1,0 +1,126 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/><meta name="viewport" content="width=device-width,initial-scale=1.0"/>
+<title>Pickers — Warehouse Picker System</title>
+<script src="https://cdn.tailwindcss.com"></script>
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css"/>
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/aos/2.3.4/aos.css"/>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet"/>
+<link rel="stylesheet" href="assets/css/style.css"/>
+</head>
+<body>
+<aside id="sidebar">
+  <div class="logo-area"><div class="flex items-center gap-3">
+    <div class="w-10 h-10 rounded-xl bg-blue-600 flex items-center justify-center"><i class="fas fa-warehouse text-white"></i></div>
+    <div><div class="text-white font-bold text-sm">Warehouse</div><div class="text-blue-400 text-xs">Route Optimizer</div></div>
+  </div></div>
+  <nav>
+    <a href="index.html"     data-page="dashboard"><span class="nav-icon"><i class="fas fa-house"></i></span>Dashboard</a>
+    <a href="load-data.html" data-page="load-data"><span class="nav-icon"><i class="fas fa-file-excel"></i></span>Load Data</a>
+    <a href="orders.html"    data-page="orders"><span class="nav-icon"><i class="fas fa-list-check"></i></span>Orders</a>
+    <a href="pickers.html"   data-page="pickers"><span class="nav-icon"><i class="fas fa-hard-hat"></i></span>Pickers</a>
+    <a href="optimize.html"  data-page="optimize"><span class="nav-icon"><i class="fas fa-route"></i></span>Optimize</a>
+    <a href="reports.html"   data-page="reports"><span class="nav-icon"><i class="fas fa-file-pdf"></i></span>Reports</a>
+  </nav>
+  <div class="p-4 border-t border-slate-800"><p class="text-xs text-slate-600 text-center">© 2025 Warehouse Picker System</p></div>
+</aside>
+<div id="sidebarOverlay" class="hidden"></div>
+<div id="main">
+  <div class="topbar">
+    <button id="sidebarToggle" class="lg:hidden mr-3 text-slate-400 hover:text-white"><i class="fas fa-bars text-lg"></i></button>
+    <div><div class="page-title">Pickers</div><div class="page-subtitle">Manage warehouse pickers and assignments</div></div>
+  </div>
+  <div class="page-content">
+    <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+      <div class="space-y-5">
+        <div class="glass-card rounded-2xl p-5" data-aos="fade-up">
+          <div class="section-header mb-4"><i class="fas fa-user-plus text-blue-400"></i> Add Picker</div>
+          <div class="space-y-3">
+            <div><label class="form-label">Picker Name</label><input id="nameInput" type="text" placeholder="e.g. John Smith" class="form-input" onkeydown="if(event.key==='Enter')doAdd()"/></div>
+            <button onclick="doAdd()" class="btn-primary w-full justify-center"><i class="fas fa-plus"></i> Add Picker</button>
+          </div>
+        </div>
+        <div class="glass-card rounded-2xl p-5" data-aos="fade-up" data-aos-delay="50">
+          <div class="section-header mb-4"><i class="fas fa-link text-blue-400"></i> Assign to Order</div>
+          <div class="space-y-3">
+            <div><label class="form-label">Order</label><select id="aOrd" class="form-select"><option value="">-- Select Order --</option></select></div>
+            <div><label class="form-label">Picker</label><select id="aPick" class="form-select"><option value="">-- Select Picker --</option></select></div>
+            <button onclick="doAssign()" class="btn-primary w-full justify-center"><i class="fas fa-check"></i> Assign</button>
+          </div>
+        </div>
+        <div class="glass-card rounded-2xl p-5" data-aos="fade-up" data-aos-delay="100">
+          <div class="section-header mb-4"><i class="fas fa-chart-bar text-blue-400"></i> Summary</div>
+          <div id="summary" class="space-y-2"></div>
+        </div>
+      </div>
+      <div class="lg:col-span-2 space-y-5">
+        <div data-aos="fade-up" data-aos-delay="60">
+          <div class="section-header mb-4"><i class="fas fa-users text-blue-400"></i> Picker Status Board</div>
+          <div id="board" class="grid grid-cols-1 sm:grid-cols-2 gap-3"></div>
+          <div id="empty" class="hidden glass-card rounded-2xl p-10 text-center"><i class="fas fa-hard-hat text-slate-600 text-4xl mb-3"></i><p class="text-slate-500">No pickers added yet.</p></div>
+        </div>
+        <div data-aos="fade-up">
+          <div class="section-header mb-4"><i class="fas fa-table text-blue-400"></i> Current Assignments</div>
+          <div class="glass-card rounded-2xl overflow-hidden"><div id="aTable"></div></div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/aos/2.3.4/aos.js"></script>
+<script type="module">
+import{AppState,initUI,updatePickerStatus,saveState}from'./assets/js/app.js';
+import{addPicker,removePicker,assignPicker,unassignOrder}from'./assets/js/picker.js';
+import{toast}from'./assets/js/ui.js';
+initUI();
+
+function render(){
+  updatePickerStatus();
+  const pk=AppState.pickers,asgn=AppState.assignments,oids=Object.keys(AppState.orders);
+  const busy=pk.filter(p=>p.status==='Busy').length;
+  document.getElementById('summary').innerHTML=
+    `<div class="flex justify-between py-2 border-b border-slate-800"><span class="text-slate-400 text-sm">Total</span><span class="text-white font-bold">${pk.length}</span></div>
+     <div class="flex justify-between py-2 border-b border-slate-800"><span class="text-slate-400 text-sm">Available</span><span class="text-green-400 font-bold">${pk.length-busy}</span></div>
+     <div class="flex justify-between py-2 border-b border-slate-800"><span class="text-slate-400 text-sm">Busy</span><span class="text-red-400 font-bold">${busy}</span></div>
+     <div class="flex justify-between py-2"><span class="text-slate-400 text-sm">Assignments</span><span class="text-blue-400 font-bold">${Object.keys(asgn).length}</span></div>`;
+
+  const board=document.getElementById('board'),empty=document.getElementById('empty');
+  if(!pk.length){board.innerHTML='';empty.classList.remove('hidden');}
+  else{
+    empty.classList.add('hidden');
+    board.innerHTML=pk.map(p=>{
+      const busy2=p.status==='Busy';
+      const aOrd=Object.entries(asgn).find(([,n])=>n===p.name)?.[0]||'';
+      return`<div class="glass-card rounded-xl p-4">
+        <div class="flex items-start gap-3">
+          <div class="w-11 h-11 rounded-xl bg-slate-800 flex items-center justify-center flex-shrink-0"><i class="fas fa-hard-hat ${busy2?'text-red-400':'text-green-400'} text-lg"></i></div>
+          <div class="flex-1 min-w-0"><p class="text-white font-bold text-sm">${p.name}</p>${aOrd?`<p class="text-slate-500 text-xs mt-0.5 truncate">${aOrd}</p>`:''}</div>
+          ${busy2?'<span class="badge-busy">Busy</span>':'<span class="badge-available">Available</span>'}
+        </div>
+        <div class="flex justify-end mt-3"><button onclick="doRemove('${p.name.replace(/'/g,"\\'")}')" class="btn-danger text-xs"><i class="fas fa-trash-alt"></i> Remove</button></div>
+      </div>`;
+    }).join('');
+  }
+
+  const prevO=document.getElementById('aOrd').value,prevP=document.getElementById('aPick').value;
+  document.getElementById('aOrd').innerHTML='<option value="">-- Select Order --</option>'+oids.map(id=>`<option value="${id}"${id===prevO?' selected':''}>${id}</option>`).join('');
+  document.getElementById('aPick').innerHTML='<option value="">-- Select Picker --</option>'+pk.map(p=>`<option value="${p.name}"${p.name===prevP?' selected':''}>${p.name}</option>`).join('');
+
+  const aEntries=Object.entries(asgn);
+  document.getElementById('aTable').innerHTML=!aEntries.length
+    ?'<p class="text-center text-slate-500 text-sm p-6">No assignments yet.</p>'
+    :`<table class="w-full text-sm"><thead><tr class="bg-slate-800 text-slate-400 text-xs uppercase"><th class="px-4 py-3 text-left">Order</th><th class="px-4 py-3 text-left">Picker</th><th class="px-4 py-3 text-left">Status</th><th class="px-4 py-3 text-left">Action</th></tr></thead><tbody>${aEntries.map(([oid,pn])=>`<tr class="border-b border-slate-800 hover:bg-slate-800/40"><td class="px-4 py-3 text-blue-300 font-mono font-semibold">${oid}</td><td class="px-4 py-3 text-white font-semibold">${pn}</td><td class="px-4 py-3">${AppState.results[oid]?'<span class="badge-available">Done</span>':'<span class="badge-pending">Pending</span>'}</td><td class="px-4 py-3"><button onclick="doUnasgn('${oid}')" class="text-slate-500 hover:text-red-400 text-xs"><i class="fas fa-unlink mr-1"></i>Unassign</button></td></tr>`).join('')}</tbody></table>`;
+}
+
+window.doAdd=function(){const n=document.getElementById('nameInput').value;const r=addPicker(n);r.ok?(document.getElementById('nameInput').value='',toast('Added '+n,'success'),render()):toast(r.msg,'warn');};
+window.doRemove=function(n){removePicker(n);toast('Removed '+n,'info');render();};
+window.doAssign=function(){
+  const o=document.getElementById('aOrd').value,p=document.getElementById('aPick').value;
+  if(!o){toast('Select an order.','warn');return;}if(!p){toast('Select a picker.','warn');return;}
+  assignPicker(o,p);toast(p+' → '+o,'success');render();
+};
+window.doUnasgn=function(o){unassignOrder(o);toast('Unassigned '+o,'info');render();};
+render();
+</script>
+</body></html>
