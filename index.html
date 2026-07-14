@@ -114,12 +114,12 @@
 <script type="module">
 import{AppState,initUI}from'./assets/js/app.js';
 initUI();
-const res=Object.values(AppState.results);
 const nO=Object.keys(AppState.orders).length;
 const nL=Object.keys(AppState.locations).filter(k=>k!=='0').length;
 const nP=AppState.pickers.length;
-const last=res.length?res[res.length-1]:null;
-const avg=res.length?(res.reduce((s,r)=>s+r.travelTimeMin,0)/res.length).toFixed(2)+' min':'—';
+// Use batchResult as the primary result reference
+const last=AppState.batchResult||(AppState.results&&AppState.results['__batch__'])||null;
+const avg=last?last.travelTimeMin.toFixed(2)+' min':'—';
 document.getElementById('kpiOrders').textContent=nO;
 document.getElementById('kpiPickers').textContent=nP;
 document.getElementById('kpiLocs').textContent=nL;
@@ -134,13 +134,13 @@ document.getElementById('statusPanel').innerHTML=AppState.dataLoaded
     <div class="flex justify-between py-2 border-b border-slate-800"><span class="text-slate-400">Orders</span><span class="text-white font-semibold">${nO}</span></div>
     <div class="flex justify-between py-2 border-b border-slate-800"><span class="text-slate-400">Locations</span><span class="text-white font-semibold">${nL}</span></div>
     <div class="flex justify-between py-2 border-b border-slate-800"><span class="text-slate-400">Pickers</span><span class="text-white font-semibold">${nP}</span></div>
-    <div class="flex justify-between py-2"><span class="text-slate-400">Routes Done</span><span class="text-white font-semibold">${res.length}</span></div>
+    <div class="flex justify-between py-2"><span class="text-slate-400">Batch Optimized</span><span class="text-white font-semibold">${last?'Yes':'No'}</span></div>
     </div><button onclick="location.href='optimize.html'" class="btn-primary w-full justify-center mt-4 text-sm"><i class="fas fa-route"></i> Go to Optimize</button>`
   :`<div class="text-center py-6"><div class="w-16 h-16 rounded-2xl bg-slate-800 flex items-center justify-center mx-auto mb-4"><i class="fas fa-database text-slate-600 text-2xl"></i></div><p class="text-slate-400 text-sm mb-4">No data loaded yet.</p><button onclick="location.href='load-data.html'" class="btn-primary text-sm"><i class="fas fa-upload"></i> Load Data</button></div>`;
 if(last){
   document.getElementById('lastBlock').classList.remove('hidden');
   document.getElementById('lastContent').innerHTML=`<div class="space-y-1.5 text-sm">
-    <div class="flex justify-between"><span class="text-slate-400">Order</span><span class="text-white font-semibold">${last.orderId}</span></div>
+    <div class="flex justify-between"><span class="text-slate-400">Batch</span><span class="text-white font-semibold">${last.ordersIncluded?last.ordersIncluded.length+' orders':last.orderId}</span></div>
     <div class="flex justify-between"><span class="text-slate-400">Picker</span><span class="text-white font-semibold">${last.assignedPicker||'—'}</span></div>
     <div class="flex justify-between"><span class="text-slate-400">Distance</span><span class="text-amber-400 font-semibold">${last.totalDistance.toFixed(1)} m</span></div>
     <div class="flex justify-between"><span class="text-slate-400">Time</span><span class="text-teal-400 font-semibold">${last.travelTimeMin.toFixed(2)} min</span></div></div>`;

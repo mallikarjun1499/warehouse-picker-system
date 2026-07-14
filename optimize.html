@@ -58,7 +58,7 @@
 <div id="main">
   <div class="topbar">
     <button id="sidebarToggle" class="lg:hidden mr-3 text-slate-400 hover:text-white"><i class="fas fa-bars text-lg"></i></button>
-    <div><div class="page-title">Optimize</div><div class="page-subtitle">Genetic Algorithm Route Optimization Engine</div></div>
+    <div><div class="page-title">Optimize</div><div class="page-subtitle">Batch Genetic Algorithm Route Optimization</div></div>
   </div>
 
   <div class="page-content">
@@ -71,29 +71,58 @@
       <button onclick="location.href='load-data.html'" class="btn-primary"><i class="fas fa-upload"></i> Load Data</button>
     </div>
 
-    <!-- Main -->
+    <!-- Main content -->
     <div id="mainContent" class="hidden space-y-6">
 
-      <!-- Controls -->
+      <!-- Batch summary + run controls -->
       <div class="glass-card rounded-2xl p-6" data-aos="fade-up">
-        <div class="section-header mb-5"><i class="fas fa-sliders text-blue-400"></i> Route Optimization Engine</div>
-        <div class="flex flex-wrap gap-4 items-end">
+        <div class="section-header mb-5"><i class="fas fa-layer-group text-blue-400"></i> Batch Optimization</div>
+
+        <!-- Batch info cards -->
+        <div class="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
+          <div class="bg-slate-800/60 rounded-xl p-4 text-center">
+            <div id="infoOrders" class="text-2xl font-bold text-blue-400">0</div>
+            <div class="text-slate-400 text-xs mt-1">Orders</div>
+          </div>
+          <div class="bg-slate-800/60 rounded-xl p-4 text-center">
+            <div id="infoLocs" class="text-2xl font-bold text-amber-400">0</div>
+            <div class="text-slate-400 text-xs mt-1">Unique Pick Locations</div>
+          </div>
+          <div class="bg-slate-800/60 rounded-xl p-4 text-center">
+            <div id="infoLines" class="text-2xl font-bold text-emerald-400">0</div>
+            <div class="text-slate-400 text-xs mt-1">Total Order Lines</div>
+          </div>
+          <div class="bg-slate-800/60 rounded-xl p-4 text-center">
+            <div id="infoPicker" class="text-lg font-bold text-purple-400 truncate">—</div>
+            <div class="text-slate-400 text-xs mt-1">Assigned Picker</div>
+          </div>
+        </div>
+
+        <!-- Picker assignment -->
+        <div class="flex flex-wrap gap-4 items-end mb-5">
           <div class="flex-1 min-w-52">
-            <label class="form-label">Select Order</label>
-            <select id="orderSel" class="form-select"></select>
+            <label class="form-label">Assign Picker to Batch</label>
+            <select id="pickerSel" class="form-select">
+              <option value="">— No picker assigned —</option>
+            </select>
           </div>
-          <div class="min-w-44">
-            <label class="form-label">Assigned Picker</label>
-            <div id="pickerDisp" class="form-input" style="color:#64748b;cursor:default;pointer-events:none;">Unassigned</div>
+          <div class="text-slate-500 text-xs self-center">
+            <i class="fas fa-info-circle mr-1"></i>
+            All orders merged · Duplicates removed · One GA run
           </div>
-          <button id="btnSingle" class="btn-primary px-8 py-3 text-sm">
-            <i class="fas fa-dna"></i> Optimize Route
+        </div>
+
+        <!-- Action buttons -->
+        <div class="flex flex-wrap gap-3">
+          <button id="btnRun" class="btn-primary px-10 py-3 text-base">
+            <i class="fas fa-dna"></i> Run Batch Optimization
           </button>
-          <button id="btnAll" class="btn-secondary px-6 py-3 text-sm">
-            <i class="fas fa-bolt"></i> Optimize All Orders
+          <button onclick="location.href='load-data.html'" class="btn-secondary text-sm">
+            <i class="fas fa-file-excel"></i> Reload Data
           </button>
         </div>
-        <!-- Inline progress -->
+
+        <!-- Inline progress bar -->
         <div id="progressWrap" class="hidden mt-5">
           <div class="flex justify-between mb-1">
             <span id="progressLabel" class="text-slate-400 text-xs">Running…</span>
@@ -105,7 +134,14 @@
         </div>
       </div>
 
-      <!-- Results (revealed after first run) -->
+      <!-- Merged pick list preview (before optimizing) -->
+      <div id="batchPreview" class="glass-card rounded-2xl p-6" data-aos="fade-up">
+        <div class="section-header mb-4"><i class="fas fa-list text-blue-400"></i> Merged Pick List Preview</div>
+        <p class="text-slate-500 text-sm mb-4">All pick locations from all orders, duplicates removed:</p>
+        <div id="mergedLocs" class="flex flex-wrap gap-2"></div>
+      </div>
+
+      <!-- Results (hidden until batch runs) -->
       <div id="resultsSection" class="hidden space-y-6">
 
         <!-- 5 KPI cards -->
@@ -115,11 +151,11 @@
             <div id="rPicker" class="text-xl font-bold text-white truncate">—</div>
           </div>
           <div class="glass-card rounded-2xl p-5 bg-gradient-to-br from-blue-600/20 to-blue-900/10 border border-blue-500/30">
-            <div class="flex items-center gap-2 mb-2"><i class="fas fa-box text-blue-400 text-xs"></i><span class="text-slate-400 text-xs font-semibold uppercase tracking-wide">Current Order</span></div>
-            <div id="rOrder" class="text-xl font-bold text-white truncate">—</div>
+            <div class="flex items-center gap-2 mb-2"><i class="fas fa-boxes-stacked text-blue-400 text-xs"></i><span class="text-slate-400 text-xs font-semibold uppercase tracking-wide">Orders Included</span></div>
+            <div id="rOrders" class="text-3xl font-bold text-white">—</div>
           </div>
           <div class="glass-card rounded-2xl p-5 bg-gradient-to-br from-amber-600/20 to-amber-900/10 border border-amber-500/30">
-            <div class="flex items-center gap-2 mb-2"><i class="fas fa-location-dot text-amber-400 text-xs"></i><span class="text-slate-400 text-xs font-semibold uppercase tracking-wide">Pick Locations</span></div>
+            <div class="flex items-center gap-2 mb-2"><i class="fas fa-location-dot text-amber-400 text-xs"></i><span class="text-slate-400 text-xs font-semibold uppercase tracking-wide">Unique Pick Locs</span></div>
             <div id="rLocs" class="text-3xl font-bold text-white">—</div>
           </div>
           <div class="glass-card rounded-2xl p-5 bg-gradient-to-br from-emerald-600/20 to-emerald-900/10 border border-emerald-500/30">
@@ -132,7 +168,7 @@
           </div>
         </div>
 
-        <!-- Route Sequence -->
+        <!-- Optimized Picking Sequence -->
         <div class="glass-card rounded-2xl p-6" data-aos="fade-up">
           <div class="section-header mb-4"><i class="fas fa-list-ol text-blue-400"></i> Optimized Picking Sequence</div>
           <div id="routeSeq" class="flex flex-wrap items-center gap-1.5 min-h-8"></div>
@@ -144,7 +180,7 @@
             <div class="p-5 border-b border-slate-800">
               <div class="section-header mb-0"><i class="fas fa-table-list text-blue-400"></i> Picker Step Table</div>
             </div>
-            <div id="stepTbl" class="overflow-auto" style="max-height:460px;"></div>
+            <div id="stepTbl" class="overflow-auto" style="max-height:500px;"></div>
           </div>
           <div class="glass-card rounded-2xl p-5" data-aos="fade-up" data-aos-delay="60">
             <div class="section-header mb-3"><i class="fas fa-map text-blue-400"></i> Warehouse Map</div>
@@ -153,7 +189,7 @@
               <span><span style="display:inline-block;width:11px;height:11px;background:#3b82f6;border-radius:50%;margin-right:4px;vertical-align:middle;"></span>Step #</span>
               <span class="text-emerald-400 font-bold mr-1">★</span><span>Depot</span>
             </div>
-            <canvas id="warehouseMap" style="width:100%;height:420px;display:block;border-radius:10px;border:1px solid #1e293b;background:#0f172a;"></canvas>
+            <canvas id="warehouseMap" style="width:100%;height:440px;display:block;border-radius:10px;border:1px solid #1e293b;background:#0f172a;"></canvas>
           </div>
         </div>
 
@@ -161,7 +197,6 @@
         <div class="flex flex-wrap gap-3" data-aos="fade-up">
           <button onclick="location.href='reports.html'" class="btn-primary"><i class="fas fa-file-export"></i> Export Report</button>
           <button onclick="location.href='pickers.html'" class="btn-secondary"><i class="fas fa-hard-hat"></i> Manage Pickers</button>
-          <button onclick="location.href='orders.html'" class="btn-secondary"><i class="fas fa-list-check"></i> Back to Orders</button>
         </div>
       </div>
 
@@ -169,34 +204,52 @@
   </div>
 </div>
 
-<!-- Loading overlay (self-contained, no dependency on ui.js showLoading) -->
+<!-- Loading overlay -->
 <div id="loadingOverlay" style="display:none;position:fixed;inset:0;z-index:9000;align-items:center;justify-content:center;background:rgba(10,15,30,.93);backdrop-filter:blur(6px);">
   <div style="text-align:center;">
     <div style="position:relative;width:72px;height:72px;margin:0 auto 18px;">
       <div style="position:absolute;inset:0;border-radius:50%;border:4px solid rgba(59,130,246,.15);"></div>
       <div id="spinRing" style="position:absolute;inset:0;border-radius:50%;border:4px solid transparent;border-top-color:#3b82f6;"></div>
     </div>
-    <p id="loadMsg" style="color:#f1f5f9;font-weight:700;font-size:17px;margin-bottom:7px;font-family:Inter,sans-serif;">Optimizing…</p>
+    <p id="loadMsg" style="color:#f1f5f9;font-weight:700;font-size:17px;margin-bottom:7px;font-family:Inter,sans-serif;">Running Batch Optimization…</p>
     <p id="loadDet" style="color:#64748b;font-size:13px;font-family:Inter,sans-serif;">Starting Genetic Algorithm…</p>
   </div>
 </div>
-
-<style>
-@keyframes _wspin{to{transform:rotate(360deg)}}
-#spinRing{animation:_wspin .8s linear infinite;}
-</style>
+<style>@keyframes _wspin{to{transform:rotate(360deg)}}#spinRing{animation:_wspin .8s linear infinite;}</style>
 
 <script src="https://cdnjs.cloudflare.com/ajax/libs/aos/2.3.4/aos.js"></script>
 <script type="module">
-// ── Imports ──────────────────────────────────────────────────────────────────
-import { AppState, initUI, saveState, getPickerForOrder } from './assets/js/app.js';
-import { optimizeRoute } from './assets/js/algorithm.js';
+import { AppState, initUI, saveState } from './assets/js/app.js';
+import { optimizeRoute }               from './assets/js/algorithm.js';
 import { routeSequenceHTML, stepTableHTML, drawWarehouseMap, toast } from './assets/js/ui.js';
 
-// ── Init ─────────────────────────────────────────────────────────────────────
 initUI();
 
-// Expose syncGA to oninput
+// ── Heal locations after JSON round-trip (restores loc_id, ensures numbers) ──
+function healLocations(locs) {
+  Object.entries(locs).forEach(([k, v]) => {
+    if (v.loc_id == null) v.loc_id = Number(k);
+    v.x     = Number(v.x)     || 0;
+    v.y     = Number(v.y)     || 0;
+    v.aisle = Number(v.aisle) || Number(v.x) || 0;
+  });
+}
+
+// ── Collect the merged (de-duplicated) pick list from ALL orders ──────────────
+function buildBatchPickList() {
+  const seen   = new Set();
+  const locs   = [];
+  const orders = AppState.orders;
+  for (const order of Object.values(orders)) {
+    for (const line of order.lines) {
+      const id = line.pickLocation;
+      if (!seen.has(id)) { seen.add(id); locs.push(id); }
+    }
+  }
+  return locs;  // ordered by first appearance, no duplicates
+}
+
+// ── GA slider sync ────────────────────────────────────────────────────────────
 window.syncGA = function () {
   const pop   = +document.getElementById('sPop').value;
   const gen   = +document.getElementById('sGen').value;
@@ -206,157 +259,125 @@ window.syncGA = function () {
   document.getElementById('lGen').textContent   = gen;
   document.getElementById('lCross').textContent = cross.toFixed(2);
   document.getElementById('lMut').textContent   = mut.toFixed(2);
-  Object.assign(AppState.gaOptions, { popSize:pop, maxGen:gen, crossoverProb:cross, mutationProb:mut });
+  Object.assign(AppState.gaOptions, { popSize: pop, maxGen: gen, crossoverProb: cross, mutationProb: mut });
 };
 
-// ── Heal locations: ensure loc_id is present (may be lost after JSON round-trip) ──
-function healLocations(locs) {
-  Object.entries(locs).forEach(([k, v]) => {
-    if (v.loc_id === undefined || v.loc_id === null) v.loc_id = Number(k);
-    v.x     = Number(v.x)     || 0;
-    v.y     = Number(v.y)     || 0;
-    v.aisle = Number(v.aisle) || Number(v.x) || 0;
-  });
-}
-
-// ── Page setup ────────────────────────────────────────────────────────────────
+// ── Page init ─────────────────────────────────────────────────────────────────
 if (!AppState.dataLoaded || !Object.keys(AppState.orders).length) {
   document.getElementById('noData').classList.remove('hidden');
 } else {
   healLocations(AppState.locations);
   document.getElementById('mainContent').classList.remove('hidden');
 
-  // Populate dropdown
-  const sel = document.getElementById('orderSel');
-  Object.keys(AppState.orders).forEach(id => {
+  const orderIds  = Object.keys(AppState.orders);
+  const batchLocs = buildBatchPickList();
+  const totalLines = Object.values(AppState.orders)
+                       .reduce((s, o) => s + o.lines.length, 0);
+
+  // Batch info row
+  document.getElementById('infoOrders').textContent = orderIds.length;
+  document.getElementById('infoLocs').textContent   = batchLocs.length;
+  document.getElementById('infoLines').textContent  = totalLines;
+
+  // Populate picker dropdown
+  const pSel = document.getElementById('pickerSel');
+  AppState.pickers.forEach(p => {
     const opt = document.createElement('option');
-    opt.value = opt.textContent = id;
-    sel.appendChild(opt);
+    opt.value = opt.textContent = p.name;
+    pSel.appendChild(opt);
   });
 
-  // Pre-select from ?order= param
-  const urlOrder = new URLSearchParams(location.search).get('order');
-  if (urlOrder && AppState.orders[urlOrder]) sel.value = urlOrder;
+  // Update picker display + info card on change
+  pSel.addEventListener('change', () => {
+    document.getElementById('infoPicker').textContent = pSel.value || '—';
+  });
+  // Init info card
+  document.getElementById('infoPicker').textContent = pSel.value || '—';
 
-  // Update picker display when order changes
-  sel.addEventListener('change', updatePickerDisplay);
-  updatePickerDisplay();
+  // Merged pick list preview badges
+  document.getElementById('mergedLocs').innerHTML = batchLocs.map(id =>
+    `<span style="display:inline-flex;align-items:center;padding:3px 9px;border-radius:7px;
+      font-size:12px;font-weight:700;background:rgba(245,158,11,.15);
+      border:1px solid rgba(245,158,11,.4);color:#fbbf24;font-family:monospace;">${id}</span>`
+  ).join('');
 
-  // Wire buttons
-  document.getElementById('btnSingle').addEventListener('click', doOptimizeSingle);
-  document.getElementById('btnAll').addEventListener('click', doOptimizeAll);
+  // Wire run button
+  document.getElementById('btnRun').addEventListener('click', doRunBatch);
 
-  // Show cached result for pre-selected order
-  const initId = sel.value;
-  if (initId && AppState.results[initId]) renderResult(AppState.results[initId]);
+  // Show cached batch result if it exists
+  if (AppState.batchResult) renderResult(AppState.batchResult);
 }
 
-// ── Update picker display ────────────────────────────────────────────────────
-function updatePickerDisplay() {
-  const id     = document.getElementById('orderSel').value;
-  const picker = id ? getPickerForOrder(id) : 'Unassigned';
-  const el     = document.getElementById('pickerDisp');
-  el.textContent = picker;
-  el.style.color = picker !== 'Unassigned' ? '#f1f5f9' : '#64748b';
-}
-
-// ── Single order optimization ─────────────────────────────────────────────────
-async function doOptimizeSingle() {
-  const orderId = document.getElementById('orderSel').value;
-  if (!orderId) { toast('Select an order first.', 'warn'); return; }
-  setBusy(true);
-  try {
-    const result = await runOptimization(orderId);
-    if (result) renderResult(result);
-  } finally {
-    setBusy(false);
-  }
-}
-
-// ── Optimize all orders ───────────────────────────────────────────────────────
-async function doOptimizeAll() {
-  const ids = Object.keys(AppState.orders);
-  if (!ids.length) { toast('No orders loaded.', 'warn'); return; }
-  setBusy(true);
-  showProgress('Starting…', 0);
-  try {
-    for (let i = 0; i < ids.length; i++) {
-      const id = ids[i];
-      setProgress(`Optimizing ${id} (${i + 1} / ${ids.length})`, Math.round(i / ids.length * 100));
-      await runOptimization(id);
-      await tick(); // let browser breathe
-    }
-    setProgress('All orders optimized!', 100);
-    await sleep(500);
-    // Render current selection
-    const cur = document.getElementById('orderSel').value;
-    if (cur && AppState.results[cur]) renderResult(AppState.results[cur]);
-    toast(`Optimized ${ids.length} order${ids.length !== 1 ? 's' : ''}!`, 'success');
-  } finally {
-    setBusy(false);
-    hideProgress();
-  }
-}
-
-// ── Core: run GA for one order, store result, return it ──────────────────────
-async function runOptimization(orderId) {
-  const order = AppState.orders[orderId];
-  if (!order) return null;
-
-  const pickLocIds = [...new Set(order.lines.map(l => l.pickLocation))];
-  if (!pickLocIds.length) {
-    toast('No pick locations in order ' + orderId, 'error');
-    return null;
+// ── Batch optimization ────────────────────────────────────────────────────────
+async function doRunBatch() {
+  const batchLocs = buildBatchPickList();
+  if (!batchLocs.length) {
+    toast('No pick locations found across all orders.', 'error');
+    return;
   }
 
   const speed  = +document.getElementById('walkSpeed').value || 84;
-  const picker = getPickerForOrder(orderId);
+  const picker = document.getElementById('pickerSel').value  || 'Unassigned';
   const gaOpts = Object.assign({}, AppState.gaOptions);
 
-  showOverlay('Optimizing ' + orderId + '…');
-  await tick(); // flush DOM so overlay appears
+  setBusy(true);
+  showOverlay('Running Batch Optimization…');
+  setProgress('Merging ' + Object.keys(AppState.orders).length + ' orders → ' + batchLocs.length + ' unique locations…', 5);
+  await tick();
 
-  let result = null;
   try {
-    // optimizeRoute is synchronous but we've already painted the overlay
-    result = optimizeRoute(pickLocIds, AppState.locations, gaOpts, null);
+    // Single GA run on the combined pick list
+    const result = optimizeRoute(
+      batchLocs,
+      AppState.locations,
+      gaOpts,
+      null  // no per-generation callback (synchronous; overlay covers it)
+    );
 
-    // Recalculate times with user walking speed (default 84 m/min matches Python)
+    // Recalculate with user walking speed
     result.travelTimeMin = result.totalDistance / speed;
     result.steps.forEach(s => { s.timeSec = (s.distanceM / speed) * 60; });
-    result.orderId        = orderId;
-    result.assignedPicker = picker;
 
-    // Persist
-    AppState.results[orderId] = result;
+    // Attach batch metadata
+    result.assignedPicker   = picker;
+    result.ordersIncluded   = Object.keys(AppState.orders);
+    result.numPickLocations = batchLocs.length;
+    // orderId used by report.js — set to a batch label
+    result.orderId          = 'BATCH (' + Object.keys(AppState.orders).length + ' orders)';
+
+    // Store as single batch result (replaces per-order results concept)
+    AppState.batchResult = result;
+    // Also write into results keyed by batch label so reports.html can read it
+    AppState.results = { '__batch__': result };
     saveState();
-    if (orderId === document.getElementById('orderSel').value) {
-      toast('Route optimized!', 'success');
-    }
+
+    setProgress('Done!', 100);
+    await tick();
+    renderResult(result);
+    toast('Batch optimization complete!', 'success');
+
   } catch (err) {
-    console.error('GA error for ' + orderId + ':', err);
-    toast('Error: ' + err.message, 'error');
+    console.error('Batch GA error:', err);
+    toast('Optimization error: ' + err.message, 'error');
   } finally {
     hideOverlay();
+    hideProgress();
+    setBusy(false);
   }
-  return result;
 }
 
 // ── Render results ────────────────────────────────────────────────────────────
 function renderResult(r) {
-  // Validate result has required fields
   if (!r || !r.optimizedRoute || !r.steps) {
-    console.error('renderResult: invalid result', r);
-    toast('Result data is invalid.', 'error');
+    console.error('renderResult: bad result', r);
     return;
   }
 
-  // Show the results block
   document.getElementById('resultsSection').classList.remove('hidden');
 
   // KPI cards
   document.getElementById('rPicker').textContent = r.assignedPicker || 'Unassigned';
-  document.getElementById('rOrder').textContent  = r.orderId        || '—';
+  document.getElementById('rOrders').textContent = r.ordersIncluded ? r.ordersIncluded.length : '—';
   document.getElementById('rLocs').textContent   = r.numPickLocations;
   document.getElementById('rDist').textContent   = r.totalDistance.toFixed(1) + ' m';
   document.getElementById('rTime').textContent   = r.travelTimeMin.toFixed(2)  + ' min';
@@ -370,50 +391,40 @@ function renderResult(r) {
   // Warehouse map
   drawMap(r.optimizedRoute);
 
-  // Smooth scroll to results
   document.getElementById('resultsSection').scrollIntoView({ behavior: 'smooth', block: 'start' });
 }
 
-// ── Draw warehouse map (with canvas sizing fix) ───────────────────────────────
+// ── Canvas map draw (with sizing fix) ────────────────────────────────────────
 function drawMap(route) {
   const canvas = document.getElementById('warehouseMap');
   if (!canvas) return;
-
-  // Must set pixel dimensions BEFORE getContext or drawing
-  const styleW = canvas.offsetWidth  || canvas.clientWidth  || 680;
-  const styleH = canvas.offsetHeight || canvas.clientHeight || 420;
-  canvas.width  = styleW;
-  canvas.height = styleH;
-
+  canvas.width  = canvas.offsetWidth  || 680;
+  canvas.height = canvas.offsetHeight || 440;
   try {
     drawWarehouseMap(canvas, AppState.locations, route);
   } catch (err) {
-    console.error('drawWarehouseMap error:', err);
-    // Fallback: show error on canvas
+    console.error('drawWarehouseMap:', err);
     const ctx = canvas.getContext('2d');
-    ctx.fillStyle = '#0f172a'; ctx.fillRect(0,0,canvas.width,canvas.height);
-    ctx.fillStyle = '#ef4444'; ctx.font = '14px Inter,sans-serif';
+    ctx.fillStyle = '#0f172a'; ctx.fillRect(0, 0, canvas.width, canvas.height);
+    ctx.fillStyle = '#ef4444'; ctx.font = '13px Inter,sans-serif';
     ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
-    ctx.fillText('Map render error: ' + err.message, canvas.width/2, canvas.height/2);
+    ctx.fillText('Map error: ' + err.message, canvas.width / 2, canvas.height / 2);
   }
 }
 
-// ── Loading overlay helpers (self-contained, avoids ui.js dependency issues) ──
+// ── Overlay helpers ───────────────────────────────────────────────────────────
 function showOverlay(msg) {
-  document.getElementById('loadMsg').textContent = msg || 'Optimizing…';
-  document.getElementById('loadDet').textContent = 'Running Genetic Algorithm…';
+  document.getElementById('loadMsg').textContent = msg;
+  document.getElementById('loadDet').textContent = 'Please wait…';
   document.getElementById('loadingOverlay').style.display = 'flex';
 }
 function hideOverlay() {
   document.getElementById('loadingOverlay').style.display = 'none';
 }
 
-// ── Progress bar helpers ──────────────────────────────────────────────────────
-function showProgress(label, pct) {
-  document.getElementById('progressWrap').classList.remove('hidden');
-  setProgress(label, pct);
-}
+// ── Progress helpers ──────────────────────────────────────────────────────────
 function setProgress(label, pct) {
+  document.getElementById('progressWrap').classList.remove('hidden');
   document.getElementById('progressLabel').textContent = label;
   document.getElementById('progressPct').textContent   = pct + '%';
   document.getElementById('progressBar').style.width   = pct + '%';
@@ -424,27 +435,20 @@ function hideProgress() {
 }
 
 // ── Button busy state ─────────────────────────────────────────────────────────
-function setBusy(busy) {
-  const s = document.getElementById('btnSingle');
-  const a = document.getElementById('btnAll');
-  if (busy) {
-    s.disabled = true;  a.disabled = true;
-    s.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Running…';
-  } else {
-    s.disabled = false; a.disabled = false;
-    s.innerHTML = '<i class="fas fa-dna"></i> Optimize Route';
-  }
+function setBusy(b) {
+  const btn = document.getElementById('btnRun');
+  btn.disabled = b;
+  btn.innerHTML = b
+    ? '<i class="fas fa-spinner fa-spin"></i> Running…'
+    : '<i class="fas fa-dna"></i> Run Batch Optimization';
 }
 
-// ── Utilities ────────────────────────────────────────────────────────────────
-function tick()  { return new Promise(r => setTimeout(r, 30)); }
-function sleep(ms){ return new Promise(r => setTimeout(r, ms)); }
+function tick() { return new Promise(r => setTimeout(r, 30)); }
 
-// ── Redraw map on window resize ───────────────────────────────────────────────
+// ── Redraw map on resize ──────────────────────────────────────────────────────
 window.addEventListener('resize', () => {
-  const id = document.getElementById('orderSel')?.value;
-  if (!id || !AppState.results[id]) return;
-  drawMap(AppState.results[id].optimizedRoute);
+  const r = AppState.batchResult;
+  if (r?.optimizedRoute) drawMap(r.optimizedRoute);
 });
 </script>
 </body>
