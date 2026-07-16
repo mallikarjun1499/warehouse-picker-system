@@ -31,20 +31,20 @@
   <div class="px-4 pb-5 border-t border-slate-800 pt-4 space-y-3">
     <p class="text-xs text-slate-500 font-semibold uppercase tracking-wider">GA Parameters</p>
     <div>
-      <label class="text-xs text-slate-500">Population: <span id="lPop" class="text-white font-semibold">50</span></label>
-      <input type="range" id="sPop" min="10" max="200" value="50" class="w-full mt-1 accent-blue-500" oninput="syncGA()"/>
+      <label class="text-xs text-slate-500">Population: <span id="lPop" class="text-white font-semibold">200</span></label>
+      <input type="range" id="sPop" min="10" max="500" value="200" class="w-full mt-1 accent-blue-500" oninput="syncGA()"/>
     </div>
     <div>
-      <label class="text-xs text-slate-500">Max Gen: <span id="lGen" class="text-white font-semibold">200</span></label>
-      <input type="range" id="sGen" min="50" max="500" value="200" class="w-full mt-1 accent-blue-500" oninput="syncGA()"/>
+      <label class="text-xs text-slate-500">Max Gen: <span id="lGen" class="text-white font-semibold">400</span></label>
+      <input type="range" id="sGen" min="10" max="500" value="400" class="w-full mt-1 accent-blue-500" oninput="syncGA()"/>
     </div>
     <div>
       <label class="text-xs text-slate-500">Crossover: <span id="lCross" class="text-white font-semibold">0.85</span></label>
       <input type="range" id="sCross" min="50" max="100" value="85" class="w-full mt-1 accent-blue-500" oninput="syncGA()"/>
     </div>
     <div>
-      <label class="text-xs text-slate-500">Mutation: <span id="lMut" class="text-white font-semibold">0.15</span></label>
-      <input type="range" id="sMut" min="1" max="50" value="15" class="w-full mt-1 accent-blue-500" oninput="syncGA()"/>
+      <label class="text-xs text-slate-500">Mutation: <span id="lMut" class="text-white font-semibold">0.05</span></label>
+      <input type="range" id="sMut" min="1" max="50" value="5" class="w-full mt-1 accent-blue-500" oninput="syncGA()"/>
     </div>
     <div>
       <label class="text-xs text-slate-500 block mb-1">Walking Speed (m/min)</label>
@@ -93,32 +93,30 @@
             <div class="text-slate-400 text-xs mt-1">Total Order Lines</div>
           </div>
           <div class="bg-slate-800/60 rounded-xl p-4 text-center">
-            <div id="infoPicker" class="text-lg font-bold text-purple-400 truncate">—</div>
-            <div class="text-slate-400 text-xs mt-1">Assigned Picker</div>
+            <div id="infoPickerCount" class="text-2xl font-bold text-purple-400">0</div>
+            <div class="text-slate-400 text-xs mt-1">Pickers Selected</div>
           </div>
         </div>
 
-        <!-- Picker assignment -->
-        <div class="flex flex-wrap gap-4 items-end mb-5">
-          <div class="flex-1 min-w-52">
-            <label class="form-label">Assign Picker to Batch</label>
-            <select id="pickerSel" class="form-select">
-              <option value="">— No picker assigned —</option>
-            </select>
+        <!-- Picker selection: locations (not orders) will be split across these pickers -->
+        <div class="mb-5">
+          <div class="flex items-center justify-between mb-2">
+            <label class="form-label mb-0">Select Pickers For This Run</label>
+            <span class="text-slate-500 text-xs"><i class="fas fa-info-circle mr-1"></i>Unique pick locations are balanced across the pickers checked below</span>
           </div>
-          <div class="text-slate-500 text-xs self-center">
-            <i class="fas fa-info-circle mr-1"></i>
-            All orders merged · Duplicates removed · One GA run
-          </div>
+          <div id="pickerCheckList" class="flex flex-wrap gap-2"></div>
         </div>
 
         <!-- Action buttons -->
         <div class="flex flex-wrap gap-3">
           <button id="btnRun" class="btn-primary px-10 py-3 text-base">
-            <i class="fas fa-dna"></i> Run Batch Optimization
+            <i class="fas fa-dna"></i> Run Picker Route Optimization
           </button>
           <button onclick="location.href='load-data.html'" class="btn-secondary text-sm">
             <i class="fas fa-file-excel"></i> Reload Data
+          </button>
+          <button onclick="location.href='pickers.html'" class="btn-secondary text-sm">
+            <i class="fas fa-hard-hat"></i> Manage Pickers
           </button>
         </div>
 
@@ -137,25 +135,39 @@
       <!-- Merged pick list preview (before optimizing) -->
       <div id="batchPreview" class="glass-card rounded-2xl p-6" data-aos="fade-up">
         <div class="section-header mb-4"><i class="fas fa-list text-blue-400"></i> Merged Pick List Preview</div>
-        <p class="text-slate-500 text-sm mb-4">All pick locations from all orders, duplicates removed:</p>
+        <p class="text-slate-500 text-sm mb-4">All pick locations from all orders, duplicates removed, forming one unique picking location list:</p>
         <div id="mergedLocs" class="flex flex-wrap gap-2"></div>
       </div>
 
-      <!-- Results (hidden until batch runs) -->
+      <!-- Location → Picker split preview -->
+      <div id="splitPreviewWrap" class="glass-card rounded-2xl p-6" data-aos="fade-up">
+        <div class="section-header mb-4"><i class="fas fa-people-arrows text-blue-400"></i> Estimated Balance Preview</div>
+        <p class="text-slate-500 text-sm mb-4">A quick balanced-count estimate so you can sanity-check picker counts before running. The desktop app's GA has no balance constraint — it decides both assignment and each picker's visiting order together, and counts can end up uneven.</p>
+        <div id="splitPreview" class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-3"></div>
+      </div>
+
+      <!-- Results (hidden until run) -->
       <div id="resultsSection" class="hidden space-y-6">
 
-        <!-- 5 KPI cards -->
-        <div class="grid grid-cols-2 lg:grid-cols-5 gap-4" data-aos="fade-up">
+        <!-- All-pickers overview -->
+        <div class="glass-card rounded-2xl overflow-hidden" data-aos="fade-up">
+          <div class="p-5 border-b border-slate-800">
+            <div class="section-header mb-0"><i class="fas fa-users text-blue-400"></i> All Pickers Overview</div>
+          </div>
+          <div id="overviewTbl" class="overflow-auto"></div>
+        </div>
+
+        <!-- Picker tabs: one optimized route PER PICKER -->
+        <div id="pickerTabs" class="flex flex-wrap gap-2" data-aos="fade-up"></div>
+
+        <!-- 4 KPI cards for the selected picker -->
+        <div class="grid grid-cols-2 lg:grid-cols-4 gap-4" data-aos="fade-up">
           <div class="glass-card rounded-2xl p-5 bg-gradient-to-br from-purple-600/20 to-purple-900/10 border border-purple-500/30">
-            <div class="flex items-center gap-2 mb-2"><i class="fas fa-hard-hat text-purple-400 text-xs"></i><span class="text-slate-400 text-xs font-semibold uppercase tracking-wide">Assigned Picker</span></div>
+            <div class="flex items-center gap-2 mb-2"><i class="fas fa-hard-hat text-purple-400 text-xs"></i><span class="text-slate-400 text-xs font-semibold uppercase tracking-wide">Picker Name</span></div>
             <div id="rPicker" class="text-xl font-bold text-white truncate">—</div>
           </div>
-          <div class="glass-card rounded-2xl p-5 bg-gradient-to-br from-blue-600/20 to-blue-900/10 border border-blue-500/30">
-            <div class="flex items-center gap-2 mb-2"><i class="fas fa-boxes-stacked text-blue-400 text-xs"></i><span class="text-slate-400 text-xs font-semibold uppercase tracking-wide">Orders Included</span></div>
-            <div id="rOrders" class="text-3xl font-bold text-white">—</div>
-          </div>
           <div class="glass-card rounded-2xl p-5 bg-gradient-to-br from-amber-600/20 to-amber-900/10 border border-amber-500/30">
-            <div class="flex items-center gap-2 mb-2"><i class="fas fa-location-dot text-amber-400 text-xs"></i><span class="text-slate-400 text-xs font-semibold uppercase tracking-wide">Unique Pick Locs</span></div>
+            <div class="flex items-center gap-2 mb-2"><i class="fas fa-location-dot text-amber-400 text-xs"></i><span class="text-slate-400 text-xs font-semibold uppercase tracking-wide">Assigned Locations</span></div>
             <div id="rLocs" class="text-3xl font-bold text-white">—</div>
           </div>
           <div class="glass-card rounded-2xl p-5 bg-gradient-to-br from-emerald-600/20 to-emerald-900/10 border border-emerald-500/30">
@@ -168,9 +180,15 @@
           </div>
         </div>
 
+        <!-- Assigned locations for this picker -->
+        <div class="glass-card rounded-2xl p-6" data-aos="fade-up">
+          <div class="section-header mb-4"><i class="fas fa-location-dot text-blue-400"></i> Assigned Locations</div>
+          <div id="assignedLocs" class="flex flex-wrap gap-2"></div>
+        </div>
+
         <!-- Optimized Picking Sequence -->
         <div class="glass-card rounded-2xl p-6" data-aos="fade-up">
-          <div class="section-header mb-4"><i class="fas fa-list-ol text-blue-400"></i> Optimized Picking Sequence</div>
+          <div class="section-header mb-4"><i class="fas fa-list-ol text-blue-400"></i> Optimized Sequence</div>
           <div id="routeSeq" class="flex flex-wrap items-center gap-1.5 min-h-8"></div>
         </div>
 
@@ -204,6 +222,13 @@
   </div>
 </div>
 
+<style>
+.picker-tab{display:inline-flex;align-items:center;gap:8px;padding:9px 16px;border-radius:10px;background:rgba(30,41,59,.6);border:1px solid var(--border);color:#94a3b8;font-size:13px;font-weight:600;cursor:pointer;transition:all .15s;font-family:inherit;}
+.picker-tab:hover{border-color:rgba(59,130,246,.4);color:#e2e8f0;}
+.picker-tab.active{background:rgba(37,99,235,.18);border-color:#3b82f6;color:#fff;}
+.picker-tab .tab-count{background:rgba(59,130,246,.25);color:#93c5fd;font-size:11px;font-weight:700;padding:1px 7px;border-radius:99px;}
+</style>
+
 <!-- Loading overlay -->
 <div id="loadingOverlay" style="display:none;position:fixed;inset:0;z-index:9000;align-items:center;justify-content:center;background:rgba(10,15,30,.93);backdrop-filter:blur(6px);">
   <div style="text-align:center;">
@@ -220,7 +245,7 @@
 <script src="https://cdnjs.cloudflare.com/ajax/libs/aos/2.3.4/aos.js"></script>
 <script type="module">
 import { AppState, initUI, saveState } from './assets/js/app.js';
-import { optimizeRoute }               from './assets/js/algorithm.js';
+import { optimizeAssignment, manhattanWarehouse } from './assets/js/algorithm.js';
 import { routeSequenceHTML, stepTableHTML, drawWarehouseMap, toast } from './assets/js/ui.js';
 
 initUI();
@@ -235,7 +260,8 @@ function healLocations(locs) {
   });
 }
 
-// ── Collect the merged (de-duplicated) pick list from ALL orders ──────────────
+// ── Step 1-3: Collect the merged, de-duplicated, unique pick-location list ────
+// (Merge all orders → remove duplicate pick locations → one unique location list)
 function buildBatchPickList() {
   const seen   = new Set();
   const locs   = [];
@@ -249,6 +275,27 @@ function buildBatchPickList() {
   return locs;  // ordered by first appearance, no duplicates
 }
 
+// ── Live-preview split ONLY: a fast, deterministic estimate shown while you
+// tick picker checkboxes so the page doesn't have to run the full GA on
+// every click. The actual Step 5 run below uses optimizeAssignment() — the
+// real GA that decides final placement.
+function previewSplit(locs, pickerNames) {
+  const assignment = {};
+  const k = pickerNames.length;
+  pickerNames.forEach(n => { assignment[n] = []; });
+  if (!k || !locs.length) return assignment;
+  const n = locs.length, base = Math.floor(n / k), remainder = n % k;
+  let cursor = 0;
+  for (let i = 0; i < k; i++) {
+    const count = base + (i < remainder ? 1 : 0);
+    assignment[pickerNames[i]] = locs.slice(cursor, cursor + count);
+    cursor += count;
+  }
+  return assignment;
+}
+
+function escHtml(s) { return String(s).replace(/[&<>"']/g, c => ({ '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;' }[c])); }
+
 // ── GA slider sync ────────────────────────────────────────────────────────────
 window.syncGA = function () {
   const pop   = +document.getElementById('sPop').value;
@@ -261,6 +308,53 @@ window.syncGA = function () {
   document.getElementById('lMut').textContent   = mut.toFixed(2);
   Object.assign(AppState.gaOptions, { popSize: pop, maxGen: gen, crossoverProb: cross, mutationProb: mut });
 };
+
+// ── Picker checkbox list (Step 4: pickers are already defined on Pickers page) ─
+function getSelectedPickerNames() {
+  return Array.from(document.querySelectorAll('.picker-check:checked')).map(cb => cb.value);
+}
+
+function renderPickerCheckboxes() {
+  const wrap = document.getElementById('pickerCheckList');
+  if (!AppState.pickers.length) {
+    wrap.innerHTML = `<p class="text-slate-500 text-sm">No pickers defined yet.
+      <a href="pickers.html" class="text-blue-400 underline">Add pickers</a> before running optimization.</p>`;
+    return;
+  }
+  wrap.innerHTML = AppState.pickers.map(p => `
+    <label class="flex items-center gap-2 bg-slate-800/60 rounded-lg px-3 py-2 cursor-pointer border border-transparent hover:border-blue-500/30">
+      <input type="checkbox" class="picker-check accent-blue-500" value="${escHtml(p.name)}" checked/>
+      <span class="text-sm text-white">${escHtml(p.name)}</span>
+    </label>`).join('');
+  wrap.querySelectorAll('.picker-check').forEach(cb => cb.addEventListener('change', updateSplitPreview));
+}
+
+// ── Live preview of how locations will split across the selected pickers ──────
+function updateSplitPreview() {
+  const batchLocs = buildBatchPickList();
+  const names = getSelectedPickerNames();
+  document.getElementById('infoPickerCount').textContent = names.length;
+  const box = document.getElementById('splitPreview');
+
+  if (!names.length) {
+    box.innerHTML = '<p class="text-slate-500 text-sm col-span-full">Select at least one picker above.</p>';
+    return;
+  }
+  const assignment = previewSplit(batchLocs, names);
+  box.innerHTML = names.map(n => {
+    const locs = assignment[n];
+    return `<div class="bg-slate-800/60 rounded-xl p-3">
+      <div class="flex justify-between items-center mb-2">
+        <span class="text-white font-semibold text-sm truncate">${escHtml(n)}</span>
+        <span class="text-blue-400 text-xs font-bold whitespace-nowrap">${locs.length} loc${locs.length === 1 ? '' : 's'}</span>
+      </div>
+      <div class="flex flex-wrap gap-1">${locs.map(id =>
+        `<span style="display:inline-flex;align-items:center;padding:2px 7px;border-radius:6px;
+          font-size:11px;font-weight:700;background:rgba(245,158,11,.15);
+          border:1px solid rgba(245,158,11,.4);color:#fbbf24;font-family:monospace;">${id}</span>`).join('')}</div>
+    </div>`;
+  }).join('');
+}
 
 // ── Page init ─────────────────────────────────────────────────────────────────
 if (!AppState.dataLoaded || !Object.keys(AppState.orders).length) {
@@ -279,20 +373,9 @@ if (!AppState.dataLoaded || !Object.keys(AppState.orders).length) {
   document.getElementById('infoLocs').textContent   = batchLocs.length;
   document.getElementById('infoLines').textContent  = totalLines;
 
-  // Populate picker dropdown
-  const pSel = document.getElementById('pickerSel');
-  AppState.pickers.forEach(p => {
-    const opt = document.createElement('option');
-    opt.value = opt.textContent = p.name;
-    pSel.appendChild(opt);
-  });
-
-  // Update picker display + info card on change
-  pSel.addEventListener('change', () => {
-    document.getElementById('infoPicker').textContent = pSel.value || '—';
-  });
-  // Init info card
-  document.getElementById('infoPicker').textContent = pSel.value || '—';
+  // Picker checkboxes + live split preview
+  renderPickerCheckboxes();
+  updateSplitPreview();
 
   // Merged pick list preview badges
   document.getElementById('mergedLocs').innerHTML = batchLocs.map(id =>
@@ -304,60 +387,97 @@ if (!AppState.dataLoaded || !Object.keys(AppState.orders).length) {
   // Wire run button
   document.getElementById('btnRun').addEventListener('click', doRunBatch);
 
-  // Show cached batch result if it exists
-  if (AppState.batchResult) renderResult(AppState.batchResult);
+  // Show cached per-picker results if they exist
+  if (AppState.pickerResults && AppState.pickerResults.length) renderResults(AppState.pickerResults);
 }
 
-// ── Batch optimization ────────────────────────────────────────────────────────
+// ── Step 5–9: Stage-1 GA assigns locations to pickers, Stage-2 GA (existing,
+//    unmodified) sequences each picker's route independently ─────────────────
 async function doRunBatch() {
   const batchLocs = buildBatchPickList();
   if (!batchLocs.length) {
     toast('No pick locations found across all orders.', 'error');
     return;
   }
+  const pickerNames = getSelectedPickerNames();
+  if (!pickerNames.length) {
+    toast('Select at least one picker to run optimization.', 'error');
+    return;
+  }
 
   const speed  = +document.getElementById('walkSpeed').value || 84;
-  const picker = document.getElementById('pickerSel').value  || 'Unassigned';
   const gaOpts = Object.assign({}, AppState.gaOptions);
 
   setBusy(true);
-  showOverlay('Running Batch Optimization…');
-  setProgress('Merging ' + Object.keys(AppState.orders).length + ' orders → ' + batchLocs.length + ' unique locations…', 5);
+  showOverlay('Running Picker Route Optimization…');
+  setProgress('Merging ' + Object.keys(AppState.orders).length + ' orders → ' + batchLocs.length + ' unique locations…', 2);
   await tick();
 
+  const results = [];
   try {
-    // Single GA run on the combined pick list
-    const result = optimizeRoute(
-      batchLocs,
-      AppState.locations,
-      gaOpts,
-      null  // no per-generation callback (synchronous; overlay covers it)
-    );
+    // ── Unified GA (exact port of the desktop app's PickerRouteGAImpl): a
+    // single chromosome simultaneously decides which picker each location
+    // goes to AND the order that picker visits them in — the desktop app
+    // has no separate assignment-then-route-sequencing stages.
+    setProgress(`Running GA — ${batchLocs.length} locations across ${pickerNames.length} picker(s)…`, 8);
+    await tick();
+    const gaRes = optimizeAssignment(batchLocs, pickerNames, AppState.locations, gaOpts,
+      (gen, maxGen, fit) => { /* per-generation callback available if progress UI is desired */ });
 
-    // Recalculate with user walking speed
-    result.travelTimeMin = result.totalDistance / speed;
-    result.steps.forEach(s => { s.timeSec = (s.distanceM / speed) * 60; });
+    for (let i = 0; i < pickerNames.length; i++) {
+      const name = pickerNames[i];
+      const seq  = gaRes.sequence[name] || [];
 
-    // Attach batch metadata
-    result.assignedPicker   = picker;
-    result.ordersIncluded   = Object.keys(AppState.orders);
-    result.numPickLocations = batchLocs.length;
-    // orderId used by report.js — set to a batch label
-    result.orderId          = 'BATCH (' + Object.keys(AppState.orders).length + ' orders)';
+      if (!seq.length) {
+        // The desktop GA has no balance constraint — a picker can legitimately end up with 0 locations
+        results.push({
+          assignedPicker: name, assignedLocations: [], optimizedRoute: [0, 0],
+          totalDistance: 0, travelTimeMin: 0, steps: [], numPickLocations: 0,
+          ordersIncluded: Object.keys(AppState.orders),
+          orderId: `${name} — 0 locations`, generationsRun: gaRes.generationsRun, fitnessHistory: gaRes.fitnessHistory,
+        });
+        continue;
+      }
 
-    // Store as single batch result (replaces per-order results concept)
-    AppState.batchResult = result;
-    // Also write into results keyed by batch label so reports.html can read it
-    AppState.results = { '__batch__': result };
+      // Build the route/steps directly from the GA's own visiting order (depot -> seq -> depot)
+      const route = [0, ...seq, 0];
+      const steps = [];
+      let totalDistance = 0;
+      for (let s = 0; s < route.length - 1; s++) {
+        const fromId = route[s], toId = route[s + 1];
+        const d = manhattanWarehouse(fromId, toId, AppState.locations);
+        totalDistance += d;
+        const tloc = AppState.locations[toId];
+        steps.push({
+          step: s + 1, locId: toId, isDepot: toId === 0,
+          block: toId === 0 ? '-' : String(tloc?.aisle ?? tloc?.x ?? '-'),
+          distanceM: d, timeSec: (d / speed) * 60,
+        });
+      }
+
+      results.push({
+        assignedPicker: name, assignedLocations: seq.slice(), optimizedRoute: route,
+        totalDistance, travelTimeMin: totalDistance / speed, steps,
+        numPickLocations: seq.length, ordersIncluded: Object.keys(AppState.orders),
+        orderId: `${name} — ${seq.length} locations`,
+        generationsRun: gaRes.generationsRun, fitnessHistory: gaRes.fitnessHistory,
+      });
+    }
+
+    // Store one result PER PICKER
+    AppState.pickerResults = results;
+    // Legacy mirrors so any other page still reading the old single-batch fields keeps working
+    AppState.batchResult = results[0] || null;
+    AppState.results = { '__batch__': results[0] || null };
     saveState();
 
     setProgress('Done!', 100);
     await tick();
-    renderResult(result);
-    toast('Batch optimization complete!', 'success');
+    renderResults(results);
+    toast(`GA picker assignment + route complete for ${results.length} picker(s)!`, 'success');
 
   } catch (err) {
-    console.error('Batch GA error:', err);
+    console.error('Picker GA error:', err);
     toast('Optimization error: ' + err.message, 'error');
   } finally {
     hideOverlay();
@@ -366,32 +486,75 @@ async function doRunBatch() {
   }
 }
 
-// ── Render results ────────────────────────────────────────────────────────────
-function renderResult(r) {
-  if (!r || !r.optimizedRoute || !r.steps) {
-    console.error('renderResult: bad result', r);
-    return;
-  }
+// ── Render per-picker results with a tab strip + all-pickers overview table ───
+let _activePickerIdx = 0;
 
+function renderResults(results) {
+  if (!results || !results.length) return;
   document.getElementById('resultsSection').classList.remove('hidden');
+
+  // All-pickers overview table
+  document.getElementById('overviewTbl').innerHTML = `
+    <table class="w-full text-sm">
+      <thead><tr class="bg-slate-800 text-slate-400 text-xs uppercase">
+        <th class="px-4 py-3 text-left">Picker Name</th>
+        <th class="px-4 py-3 text-left">Assigned Locations</th>
+        <th class="px-4 py-3 text-left">Distance</th>
+        <th class="px-4 py-3 text-left">Travel Time</th>
+      </tr></thead>
+      <tbody>${results.map(r => `
+        <tr class="border-b border-slate-800 hover:bg-slate-800/40">
+          <td class="px-4 py-3 text-white font-semibold">${escHtml(r.assignedPicker)}</td>
+          <td class="px-4 py-3 text-amber-400 font-mono">${r.numPickLocations}</td>
+          <td class="px-4 py-3 text-emerald-400">${r.totalDistance.toFixed(1)} m</td>
+          <td class="px-4 py-3 text-teal-400">${r.travelTimeMin.toFixed(2)} min</td>
+        </tr>`).join('')}
+      </tbody>
+    </table>`;
+
+  // Tab strip — one tab per picker
+  document.getElementById('pickerTabs').innerHTML = results.map((r, idx) => `
+    <button type="button" class="picker-tab${idx === 0 ? ' active' : ''}" data-idx="${idx}" onclick="selectPickerTab(${idx})">
+      <i class="fas fa-hard-hat"></i> ${escHtml(r.assignedPicker)}
+      <span class="tab-count">${r.numPickLocations}</span>
+    </button>`).join('');
+
+  _activePickerIdx = 0;
+  renderPickerDetail(results[0]);
+
+  document.getElementById('resultsSection').scrollIntoView({ behavior: 'smooth', block: 'start' });
+}
+
+window.selectPickerTab = function (idx) {
+  _activePickerIdx = idx;
+  document.querySelectorAll('.picker-tab').forEach((el, i) => el.classList.toggle('active', i === idx));
+  renderPickerDetail(AppState.pickerResults[idx]);
+};
+
+function renderPickerDetail(r) {
+  if (!r) return;
 
   // KPI cards
   document.getElementById('rPicker').textContent = r.assignedPicker || 'Unassigned';
-  document.getElementById('rOrders').textContent = r.ordersIncluded ? r.ordersIncluded.length : '—';
   document.getElementById('rLocs').textContent   = r.numPickLocations;
   document.getElementById('rDist').textContent   = r.totalDistance.toFixed(1) + ' m';
   document.getElementById('rTime').textContent   = r.travelTimeMin.toFixed(2)  + ' min';
 
+  // Assigned locations badges
+  document.getElementById('assignedLocs').innerHTML = (r.assignedLocations || []).map(id =>
+    `<span style="display:inline-flex;align-items:center;padding:3px 9px;border-radius:7px;
+      font-size:12px;font-weight:700;background:rgba(245,158,11,.15);
+      border:1px solid rgba(245,158,11,.4);color:#fbbf24;font-family:monospace;">${id}</span>`
+  ).join('') || '<p class="text-slate-500 text-sm">No locations assigned.</p>';
+
   // Route sequence badges
-  document.getElementById('routeSeq').innerHTML = routeSequenceHTML(r.optimizedRoute);
+  document.getElementById('routeSeq').innerHTML = routeSequenceHTML(r.optimizedRoute || []);
 
   // Step table
-  document.getElementById('stepTbl').innerHTML = stepTableHTML(r.steps);
+  document.getElementById('stepTbl').innerHTML = stepTableHTML(r.steps || []);
 
   // Warehouse map
-  drawMap(r.optimizedRoute);
-
-  document.getElementById('resultsSection').scrollIntoView({ behavior: 'smooth', block: 'start' });
+  drawMap(r.optimizedRoute || []);
 }
 
 // ── Canvas map draw (with sizing fix) ────────────────────────────────────────
@@ -440,14 +603,14 @@ function setBusy(b) {
   btn.disabled = b;
   btn.innerHTML = b
     ? '<i class="fas fa-spinner fa-spin"></i> Running…'
-    : '<i class="fas fa-dna"></i> Run Batch Optimization';
+    : '<i class="fas fa-dna"></i> Run Picker Route Optimization';
 }
 
 function tick() { return new Promise(r => setTimeout(r, 30)); }
 
 // ── Redraw map on resize ──────────────────────────────────────────────────────
 window.addEventListener('resize', () => {
-  const r = AppState.batchResult;
+  const r = AppState.pickerResults && AppState.pickerResults[_activePickerIdx];
   if (r?.optimizedRoute) drawMap(r.optimizedRoute);
 });
 </script>

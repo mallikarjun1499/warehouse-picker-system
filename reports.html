@@ -40,8 +40,8 @@
     <!-- No result notice -->
     <div id="noResult" class="hidden glass-card rounded-2xl p-12 text-center" data-aos="fade-up">
       <i class="fas fa-file-circle-exclamation text-slate-600 text-5xl mb-5"></i>
-      <p class="text-slate-400 text-lg mb-2">No batch result yet</p>
-      <p class="text-slate-500 text-sm mb-6">Run the batch optimization first.</p>
+      <p class="text-slate-400 text-lg mb-2">No optimization result yet</p>
+      <p class="text-slate-500 text-sm mb-6">Run picker route optimization first.</p>
       <button onclick="location.href='optimize.html'" class="btn-primary">
         <i class="fas fa-route"></i> Go to Optimize
       </button>
@@ -50,28 +50,32 @@
     <!-- Reports content -->
     <div id="reportsContent" class="hidden space-y-6">
 
-      <!-- Batch summary KPIs -->
-      <div class="grid grid-cols-2 lg:grid-cols-5 gap-4" data-aos="fade-up">
+      <!-- All-pickers overview KPIs -->
+      <div class="grid grid-cols-2 lg:grid-cols-4 gap-4" data-aos="fade-up">
         <div class="glass-card rounded-2xl p-5 bg-gradient-to-br from-purple-600/20 to-purple-900/10 border border-purple-500/30">
-          <div class="flex items-center gap-2 mb-2"><i class="fas fa-hard-hat text-purple-400 text-xs"></i><span class="text-slate-400 text-xs font-semibold uppercase tracking-wide">Picker</span></div>
-          <div id="kPicker" class="text-xl font-bold text-white truncate">—</div>
-        </div>
-        <div class="glass-card rounded-2xl p-5 bg-gradient-to-br from-blue-600/20 to-blue-900/10 border border-blue-500/30">
-          <div class="flex items-center gap-2 mb-2"><i class="fas fa-boxes-stacked text-blue-400 text-xs"></i><span class="text-slate-400 text-xs font-semibold uppercase tracking-wide">Orders</span></div>
-          <div id="kOrders" class="text-3xl font-bold text-white">—</div>
+          <div class="flex items-center gap-2 mb-2"><i class="fas fa-hard-hat text-purple-400 text-xs"></i><span class="text-slate-400 text-xs font-semibold uppercase tracking-wide">Pickers</span></div>
+          <div id="kPickers" class="text-3xl font-bold text-white">—</div>
         </div>
         <div class="glass-card rounded-2xl p-5 bg-gradient-to-br from-amber-600/20 to-amber-900/10 border border-amber-500/30">
-          <div class="flex items-center gap-2 mb-2"><i class="fas fa-location-dot text-amber-400 text-xs"></i><span class="text-slate-400 text-xs font-semibold uppercase tracking-wide">Pick Locations</span></div>
+          <div class="flex items-center gap-2 mb-2"><i class="fas fa-location-dot text-amber-400 text-xs"></i><span class="text-slate-400 text-xs font-semibold uppercase tracking-wide">Total Pick Locations</span></div>
           <div id="kLocs" class="text-3xl font-bold text-white">—</div>
         </div>
         <div class="glass-card rounded-2xl p-5 bg-gradient-to-br from-emerald-600/20 to-emerald-900/10 border border-emerald-500/30">
-          <div class="flex items-center gap-2 mb-2"><i class="fas fa-road text-emerald-400 text-xs"></i><span class="text-slate-400 text-xs font-semibold uppercase tracking-wide">Distance</span></div>
+          <div class="flex items-center gap-2 mb-2"><i class="fas fa-road text-emerald-400 text-xs"></i><span class="text-slate-400 text-xs font-semibold uppercase tracking-wide">Total Distance</span></div>
           <div id="kDist" class="text-3xl font-bold text-white">—</div>
         </div>
         <div class="glass-card rounded-2xl p-5 bg-gradient-to-br from-teal-600/20 to-teal-900/10 border border-teal-500/30">
-          <div class="flex items-center gap-2 mb-2"><i class="fas fa-clock text-teal-400 text-xs"></i><span class="text-slate-400 text-xs font-semibold uppercase tracking-wide">Est. Time</span></div>
+          <div class="flex items-center gap-2 mb-2"><i class="fas fa-clock text-teal-400 text-xs"></i><span class="text-slate-400 text-xs font-semibold uppercase tracking-wide">Total Est. Time</span></div>
           <div id="kTime" class="text-3xl font-bold text-white">—</div>
         </div>
+      </div>
+
+      <!-- All-pickers table -->
+      <div class="glass-card rounded-2xl overflow-hidden" data-aos="fade-up">
+        <div class="p-5 border-b border-slate-800">
+          <div class="section-header mb-0"><i class="fas fa-users text-blue-400"></i> All Pickers Overview</div>
+        </div>
+        <div id="overviewTbl" class="overflow-auto"></div>
       </div>
 
       <!-- Download cards -->
@@ -82,11 +86,11 @@
             <div class="w-14 h-14 rounded-2xl bg-emerald-600/20 flex items-center justify-center flex-shrink-0">
               <i class="fas fa-file-excel text-emerald-400 text-2xl"></i>
             </div>
-            <div><h3 class="text-white font-bold text-lg">Excel Report</h3><p class="text-slate-400 text-sm">3-sheet workbook</p></div>
+            <div><h3 class="text-white font-bold text-lg">Excel Report</h3><p class="text-slate-400 text-sm">One sheet per picker</p></div>
           </div>
           <ul class="space-y-2 mb-6">
-            <li class="flex items-center gap-2 text-slate-300 text-sm"><i class="fas fa-check text-emerald-400 text-xs w-4"></i>Summary — picker, orders, distance, time</li>
-            <li class="flex items-center gap-2 text-slate-300 text-sm"><i class="fas fa-check text-emerald-400 text-xs w-4"></i>Route Steps — full step-by-step table</li>
+            <li class="flex items-center gap-2 text-slate-300 text-sm"><i class="fas fa-check text-emerald-400 text-xs w-4"></i>Overview — every picker, locations, distance, time</li>
+            <li class="flex items-center gap-2 text-slate-300 text-sm"><i class="fas fa-check text-emerald-400 text-xs w-4"></i>Per-Picker Sheets — assigned locations + step-by-step route</li>
             <li class="flex items-center gap-2 text-slate-300 text-sm"><i class="fas fa-check text-emerald-400 text-xs w-4"></i>Orders Included — list of all merged orders</li>
           </ul>
           <button onclick="doExcel()" class="btn-primary w-full justify-center"
@@ -103,9 +107,9 @@
             <div><h3 class="text-white font-bold text-lg">PDF Report</h3><p class="text-slate-400 text-sm">Professional printable report</p></div>
           </div>
           <ul class="space-y-2 mb-6">
-            <li class="flex items-center gap-2 text-slate-300 text-sm"><i class="fas fa-check text-red-400 text-xs w-4"></i>Batch summary with all metadata</li>
-            <li class="flex items-center gap-2 text-slate-300 text-sm"><i class="fas fa-check text-red-400 text-xs w-4"></i>Full optimized route sequence</li>
-            <li class="flex items-center gap-2 text-slate-300 text-sm"><i class="fas fa-check text-red-400 text-xs w-4"></i>Step-by-step table + orders list</li>
+            <li class="flex items-center gap-2 text-slate-300 text-sm"><i class="fas fa-check text-red-400 text-xs w-4"></i>All-pickers overview page</li>
+            <li class="flex items-center gap-2 text-slate-300 text-sm"><i class="fas fa-check text-red-400 text-xs w-4"></i>One section per picker with their route sequence</li>
+            <li class="flex items-center gap-2 text-slate-300 text-sm"><i class="fas fa-check text-red-400 text-xs w-4"></i>Step-by-step table + orders list per picker</li>
           </ul>
           <button onclick="doPDF()" class="btn-primary w-full justify-center"
                   style="background:linear-gradient(135deg,#7f1d1d,#991b1b);">
@@ -114,23 +118,12 @@
         </div>
       </div>
 
-      <!-- Optimized route sequence -->
-      <div class="glass-card rounded-2xl p-6" data-aos="fade-up">
-        <div class="section-header mb-4"><i class="fas fa-list-ol text-blue-400"></i> Optimized Picking Sequence</div>
-        <div id="routeSeq" class="flex flex-wrap items-center gap-1.5"></div>
-      </div>
+      <!-- Per-picker report sections — every picker has their own section -->
+      <div id="pickerSections" class="space-y-6"></div>
 
-      <!-- Step table -->
-      <div class="glass-card rounded-2xl overflow-hidden" data-aos="fade-up">
-        <div class="p-5 border-b border-slate-800">
-          <div class="section-header mb-0"><i class="fas fa-table-list text-blue-400"></i> Picker Step Table</div>
-        </div>
-        <div id="stepTbl" class="overflow-auto" style="max-height:500px;"></div>
-      </div>
-
-      <!-- Orders included -->
+      <!-- Orders included (merged, shared across all pickers) -->
       <div id="ordersBlock" class="glass-card rounded-2xl p-6 hidden" data-aos="fade-up">
-        <div class="section-header mb-4"><i class="fas fa-boxes-stacked text-blue-400"></i> Orders Included in Batch</div>
+        <div class="section-header mb-4"><i class="fas fa-boxes-stacked text-blue-400"></i> Orders Merged Into This Batch</div>
         <div id="orderBadges" class="flex flex-wrap gap-2"></div>
       </div>
 
@@ -145,33 +138,89 @@ import { exportExcel, exportPDF } from './assets/js/report.js';
 import { routeSequenceHTML, stepTableHTML } from './assets/js/ui.js';
 initUI();
 
-// Read the single batch result
-const r = AppState.batchResult
-       || (AppState.results && AppState.results['__batch__'])
-       || null;
+function escHtml(s) { return String(s).replace(/[&<>"']/g, c => ({ '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;' }[c])); }
 
-if (!r || !r.optimizedRoute) {
+// Read the results — one entry PER PICKER (locations assigned to pickers, not orders)
+const results = (AppState.pickerResults && AppState.pickerResults.length)
+  ? AppState.pickerResults
+  : (AppState.batchResult ? [AppState.batchResult] : []); // legacy fallback
+
+if (!results.length || !results[0]?.optimizedRoute) {
   document.getElementById('noResult').classList.remove('hidden');
 } else {
   document.getElementById('reportsContent').classList.remove('hidden');
 
-  // KPI cards
-  document.getElementById('kPicker').textContent = r.assignedPicker || 'Unassigned';
-  document.getElementById('kOrders').textContent = r.ordersIncluded ? r.ordersIncluded.length : '—';
-  document.getElementById('kLocs').textContent   = r.numPickLocations;
-  document.getElementById('kDist').textContent   = r.totalDistance.toFixed(1) + ' m';
-  document.getElementById('kTime').textContent   = r.travelTimeMin.toFixed(2)  + ' min';
+  // Overview KPIs across all pickers
+  const totalLocs = results.reduce((s, r) => s + (r.numPickLocations || 0), 0);
+  const totalDist = results.reduce((s, r) => s + (r.totalDistance   || 0), 0);
+  const totalTime = results.reduce((s, r) => s + (r.travelTimeMin   || 0), 0);
+  document.getElementById('kPickers').textContent = results.length;
+  document.getElementById('kLocs').textContent    = totalLocs;
+  document.getElementById('kDist').textContent    = totalDist.toFixed(1) + ' m';
+  document.getElementById('kTime').textContent    = totalTime.toFixed(2) + ' min';
 
-  // Route sequence
-  document.getElementById('routeSeq').innerHTML = routeSequenceHTML(r.optimizedRoute);
+  // All-pickers overview table
+  document.getElementById('overviewTbl').innerHTML = `
+    <table class="w-full text-sm">
+      <thead><tr class="bg-slate-800 text-slate-400 text-xs uppercase">
+        <th class="px-4 py-3 text-left">Picker Name</th>
+        <th class="px-4 py-3 text-left">Assigned Locations</th>
+        <th class="px-4 py-3 text-left">Optimized Sequence</th>
+        <th class="px-4 py-3 text-left">Distance</th>
+        <th class="px-4 py-3 text-left">Travel Time</th>
+      </tr></thead>
+      <tbody>${results.map(r => `
+        <tr class="border-b border-slate-800 hover:bg-slate-800/40">
+          <td class="px-4 py-3 text-white font-semibold">${escHtml(r.assignedPicker || 'Unassigned')}</td>
+          <td class="px-4 py-3 text-amber-400 font-mono">${r.numPickLocations}</td>
+          <td class="px-4 py-3 text-slate-400 font-mono text-xs">${(r.optimizedRoute || []).length} steps</td>
+          <td class="px-4 py-3 text-emerald-400">${r.totalDistance.toFixed(1)} m</td>
+          <td class="px-4 py-3 text-teal-400">${r.travelTimeMin.toFixed(2)} min</td>
+        </tr>`).join('')}
+      </tbody>
+    </table>`;
 
-  // Step table
-  document.getElementById('stepTbl').innerHTML = stepTableHTML(r.steps || []);
+  // One section PER PICKER
+  document.getElementById('pickerSections').innerHTML = results.map((r, i) => `
+    <div class="glass-card rounded-2xl overflow-hidden" data-aos="fade-up">
+      <div class="p-5 border-b border-slate-800 flex items-center justify-between flex-wrap gap-2">
+        <div class="section-header mb-0"><i class="fas fa-hard-hat text-blue-400"></i> ${escHtml(r.assignedPicker || 'Unassigned')}</div>
+        <div class="flex gap-4 text-xs text-slate-400">
+          <span><i class="fas fa-location-dot text-amber-400 mr-1"></i>${r.numPickLocations} locations</span>
+          <span><i class="fas fa-road text-emerald-400 mr-1"></i>${r.totalDistance.toFixed(1)} m</span>
+          <span><i class="fas fa-clock text-teal-400 mr-1"></i>${r.travelTimeMin.toFixed(2)} min</span>
+        </div>
+      </div>
+      <div class="p-5 space-y-5">
+        <div>
+          <p class="text-slate-500 text-xs font-semibold uppercase tracking-wide mb-2">Assigned Locations</p>
+          <div class="flex flex-wrap gap-2">${(r.assignedLocations || []).map(id =>
+            `<span style="display:inline-flex;align-items:center;padding:3px 9px;border-radius:7px;
+              font-size:12px;font-weight:700;background:rgba(245,158,11,.15);
+              border:1px solid rgba(245,158,11,.4);color:#fbbf24;font-family:monospace;">${id}</span>`
+          ).join('') || '<span class="text-slate-500 text-sm">None</span>'}</div>
+        </div>
+        <div>
+          <p class="text-slate-500 text-xs font-semibold uppercase tracking-wide mb-2">Optimized Sequence</p>
+          <div id="routeSeq-${i}" class="flex flex-wrap items-center gap-1.5"></div>
+        </div>
+        <div>
+          <p class="text-slate-500 text-xs font-semibold uppercase tracking-wide mb-2">Step Table</p>
+          <div id="stepTbl-${i}" class="overflow-auto rounded-xl border border-slate-800" style="max-height:420px;"></div>
+        </div>
+      </div>
+    </div>`).join('');
 
-  // Orders included badges
-  if (r.ordersIncluded?.length) {
+  results.forEach((r, i) => {
+    document.getElementById(`routeSeq-${i}`).innerHTML = routeSequenceHTML(r.optimizedRoute || []);
+    document.getElementById(`stepTbl-${i}`).innerHTML   = stepTableHTML(r.steps || []);
+  });
+
+  // Orders merged into the batch (shared across all pickers)
+  const ordersIncluded = results[0]?.ordersIncluded || [];
+  if (ordersIncluded.length) {
     document.getElementById('ordersBlock').classList.remove('hidden');
-    document.getElementById('orderBadges').innerHTML = r.ordersIncluded.map(id =>
+    document.getElementById('orderBadges').innerHTML = ordersIncluded.map(id =>
       `<span style="display:inline-flex;align-items:center;padding:4px 12px;border-radius:8px;
          font-size:13px;font-weight:700;background:rgba(59,130,246,.15);
          border:1px solid rgba(59,130,246,.4);color:#93c5fd;font-family:monospace;">${id}</span>`
@@ -179,8 +228,8 @@ if (!r || !r.optimizedRoute) {
   }
 }
 
-window.doExcel = function () { if (r) exportExcel([r]); };
-window.doPDF   = function () { if (r) exportPDF([r]);   };
+window.doExcel = function () { if (results.length) exportExcel(results); };
+window.doPDF   = function () { if (results.length) exportPDF(results);   };
 </script>
 </body>
 </html>

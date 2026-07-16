@@ -67,53 +67,61 @@
 </div>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/aos/2.3.4/aos.js"></script>
 <script type="module">
-import{AppState,initUI,getPickerForOrder}from'./assets/js/app.js';
-import{assignPicker}from'./assets/js/picker.js';
+import{AppState,initUI,getPickersForOrder}from'./assets/js/app.js';
 import{toast}from'./assets/js/ui.js';
 initUI();
 const orders=AppState.orders,ids=Object.keys(orders);
 if(!AppState.dataLoaded||!ids.length){document.getElementById('noData').classList.remove('hidden');}
 else{document.getElementById('ordersContent').classList.remove('hidden');render(ids);}
 
+// An order counts as "optimized" once a picker route optimization has run
+// AND every one of its locations landed on some picker's route.
+function isOrderDone(id){
+  if(!AppState.pickerResults||!AppState.pickerResults.length)return false;
+  const uniq=[...new Set(orders[id].lines.map(l=>l.pickLocation))];
+  const pk=getPickersForOrder(id);
+  return pk.length>0 && uniq.every(loc=>pk.some(name=>
+    (AppState.pickerResults.find(r=>r.assignedPicker===name)?.assignedLocations||[]).includes(loc)
+  ));
+}
+
 function render(list){
   document.getElementById('orderCount').textContent=list.length+' order'+(list.length!==1?'s':'');
   document.getElementById('orderList').innerHTML=!list.length
     ?'<p class="p-6 text-slate-500 text-sm text-center">No orders match.</p>'
     :list.map(id=>{
-      const o=orders[id],pk=getPickerForOrder(id),done=!!AppState.results[id],uniq=new Set(o.lines.map(l=>l.pickLocation)).size;
+      const o=orders[id],pks=getPickersForOrder(id),done=isOrderDone(id),uniq=new Set(o.lines.map(l=>l.pickLocation)).size;
+      const pkLabel=pks.length===1?pks[0]:(pks.length>1?pks.length+' pickers':'');
       return`<div class="order-row flex items-center gap-3 px-4 py-3 hover:bg-slate-800/60 cursor-pointer transition-colors" data-id="${id}" onclick="selOrder('${id}')">
         <div class="w-9 h-9 rounded-lg bg-blue-600/20 flex items-center justify-center flex-shrink-0"><i class="fas fa-box text-blue-400 text-sm"></i></div>
         <div class="flex-1 min-w-0"><p class="text-white font-semibold text-sm truncate">${id}</p><p class="text-slate-500 text-xs">${o.lines.length} lines · ${uniq} locs</p></div>
-        <div class="flex flex-col items-end gap-1 flex-shrink-0">${done?'<span class="badge-available">Done</span>':'<span class="badge-pending">Pending</span>'}${pk!=='Unassigned'?`<span class="text-xs text-slate-500 truncate max-w-[90px]">${pk}</span>`:''}</div></div>`;
+        <div class="flex flex-col items-end gap-1 flex-shrink-0">${done?'<span class="badge-available">Done</span>':'<span class="badge-pending">Pending</span>'}${pkLabel?`<span class="text-xs text-slate-500 truncate max-w-[90px]">${pkLabel}</span>`:''}</div></div>`;
     }).join('');
 }
 
 window.selOrder=function(id){
   document.querySelectorAll('.order-row').forEach(r=>r.classList.remove('bg-blue-900/20'));
   document.querySelector(`.order-row[data-id="${id}"]`)?.classList.add('bg-blue-900/20');
-  const o=orders[id],pk=getPickerForOrder(id),res=AppState.results[id],uniq=[...new Set(o.lines.map(l=>l.pickLocation))];
-  const pOpts=AppState.pickers.map(p=>`<option value="${p.name}"${p.name===pk?' selected':''}>${p.name}</option>`).join('');
+  const o=orders[id],pks=getPickersForOrder(id),done=isOrderDone(id),uniq=[...new Set(o.lines.map(l=>l.pickLocation))];
+  const pkLabel=pks.length?pks.join(', '):'—';
   const rows=o.lines.map(l=>`<tr class="border-b border-slate-800/60 hover:bg-slate-800/30"><td class="px-3 py-2 text-slate-400 text-xs text-center">${l.line}</td><td class="px-3 py-2 text-slate-300 text-xs">${l.item}</td><td class="px-3 py-2 text-amber-300 font-mono text-xs text-center font-semibold">${l.pickLocation}</td></tr>`).join('');
   document.getElementById('detailContent').innerHTML=`<div class="p-5">
-    <div class="flex items-start justify-between mb-4"><div><h3 class="text-white font-bold text-lg">${id}</h3><p class="text-slate-500 text-xs">${o.lines.length} lines · ${uniq.length} unique locs</p></div>${res?'<span class="badge-available">Optimized</span>':'<span class="badge-pending">Pending</span>'}</div>
+    <div class="flex items-start justify-between mb-4"><div><h3 class="text-white font-bold text-lg">${id}</h3><p class="text-slate-500 text-xs">${o.lines.length} lines · ${uniq.length} unique locs</p></div>${done?'<span class="badge-available">Optimized</span>':'<span class="badge-pending">Pending</span>'}</div>
     <div class="grid grid-cols-3 gap-3 mb-4">
       <div class="bg-slate-800/60 rounded-xl p-3 text-center"><div class="text-2xl font-bold text-blue-400">${o.lines.length}</div><div class="text-slate-500 text-xs mt-1">Lines</div></div>
       <div class="bg-slate-800/60 rounded-xl p-3 text-center"><div class="text-2xl font-bold text-amber-400">${uniq.length}</div><div class="text-slate-500 text-xs mt-1">Locations</div></div>
-      <div class="bg-slate-800/60 rounded-xl p-3 text-center"><div class="text-sm font-bold ${pk!=='Unassigned'?'text-green-400':'text-slate-500'} truncate">${pk!=='Unassigned'?pk:'—'}</div><div class="text-slate-500 text-xs mt-1">Picker</div></div>
+      <div class="bg-slate-800/60 rounded-xl p-3 text-center"><div class="text-sm font-bold ${pks.length?'text-green-400':'text-slate-500'} truncate">${pkLabel}</div><div class="text-slate-500 text-xs mt-1">Picker${pks.length!==1?'s':''}</div></div>
     </div>
-    ${res?`<div class="bg-teal-900/20 border border-teal-700/30 rounded-xl p-3 mb-4"><div class="flex justify-between text-sm"><span class="text-teal-300"><i class="fas fa-road mr-1"></i>${res.totalDistance.toFixed(1)} m</span><span class="text-teal-400"><i class="fas fa-clock mr-1"></i>${res.travelTimeMin.toFixed(2)} min</span></div></div>`:''}
-    ${AppState.pickers.length?`<div class="flex gap-2 mb-4"><select id="pSel_${id}" class="form-select flex-1 text-sm"><option value="">Assign Picker</option>${pOpts}</select><button onclick="doAssign('${id}')" class="btn-primary text-sm px-4"><i class="fas fa-link"></i></button></div>`:`<div class="bg-slate-800/40 border border-slate-700/40 rounded-xl p-3 mb-4 text-center"><p class="text-slate-500 text-xs"><a href="pickers.html" class="text-blue-400 hover:underline">Add pickers</a> to enable assignment</p></div>`}
-    <button onclick="location.href='optimize.html?order=${id}'" class="btn-primary w-full justify-center mb-4 text-sm"><i class="fas fa-route"></i> Optimize This Order</button>
+    <div class="bg-slate-800/40 border border-slate-700/40 rounded-xl p-3 mb-4">
+      <p class="text-slate-500 text-xs"><i class="fas fa-circle-info text-blue-400 mr-1"></i>Pickers are assigned automatically to this order's pick <em>locations</em> during batch optimization — an order can be split across more than one picker.</p>
+    </div>
+    <button onclick="location.href='optimize.html'" class="btn-primary w-full justify-center mb-4 text-sm"><i class="fas fa-route"></i> Go to Optimize</button>
     <div class="overflow-auto max-h-56 rounded-xl border border-slate-700/50"><table class="w-full text-xs"><thead><tr class="bg-slate-800 text-slate-400 uppercase"><th class="px-3 py-2 text-center">Line</th><th class="px-3 py-2 text-left">Item</th><th class="px-3 py-2 text-center">Pick Loc</th></tr></thead><tbody>${rows}</tbody></table></div>
   </div>`;
 };
-window.doAssign=function(id){
-  const s=document.getElementById('pSel_'+id);if(!s?.value){toast('Select a picker.','warn');return;}
-  assignPicker(id,s.value);toast(s.value+' → '+id,'success');window.selOrder(id);render(filtered());
-};
 function filtered(){
   const q=document.getElementById('searchInput').value.toLowerCase(),st=document.getElementById('statusFilter').value;
-  return ids.filter(id=>{const mQ=id.toLowerCase().includes(q);const mS=st==='all'||(st==='optimized'?!!AppState.results[id]:!AppState.results[id]);return mQ&&mS;});
+  return ids.filter(id=>{const mQ=id.toLowerCase().includes(q);const mS=st==='all'||(st==='optimized'?isOrderDone(id):!isOrderDone(id));return mQ&&mS;});
 }
 document.getElementById('searchInput').addEventListener('input',()=>render(filtered()));
 document.getElementById('statusFilter').addEventListener('change',()=>render(filtered()));

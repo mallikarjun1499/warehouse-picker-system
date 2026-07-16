@@ -5,12 +5,17 @@ export const AppState = {
   locations:   {},
   pickers:     [],
   results:     {},        // keyed results (batch writes '__batch__' key)
-  batchResult: null,      // the single batch optimization result
-  assignments: {},
+  batchResult: null,      // legacy: mirrors pickerResults[0] for old pages
+  pickerResults: [],      // Step 5: one optimized route result PER PICKER
+                           // (unique locations are assigned to pickers, not orders)
   dataLoaded:  false,
   gaOptions: {
-    popSize: 50, maxGen: 200, crossoverProb: 0.85,
-    mutationProb: 0.15, survivorRatio: 0.3, maxSimilar: 30,
+    // Matches the desktop app's OptimizeUI.Designer.cs default NumericUpDown
+    // values exactly: numUpPopSize=200, numUpMaxGen=400,
+    // numUpCrossoverProbability=0.85, numUpMutationProbability=0.05,
+    // numUpSurvivorPopRatio=0.10, numUpSimilarFitness=150.
+    popSize: 200, maxGen: 400, crossoverProb: 0.85,
+    mutationProb: 0.05, survivorRatio: 0.10, maxSimilar: 150,
   },
 };
 
@@ -22,7 +27,7 @@ export function saveState() {
       pickers:     AppState.pickers,
       results:     AppState.results,
       batchResult: AppState.batchResult,
-      assignments: AppState.assignments,
+      pickerResults: AppState.pickerResults,
       dataLoaded:  AppState.dataLoaded,
       gaOptions:   AppState.gaOptions,
     }));
@@ -35,6 +40,7 @@ export function loadState() {
     if (!raw) return;
     const s = JSON.parse(raw);
     Object.assign(AppState, s);
+    if (!Array.isArray(AppState.pickerResults)) AppState.pickerResults = [];
     // Ensure location numbers survive JSON round-trip
     if (AppState.locations) {
       Object.entries(AppState.locations).forEach(([k, v]) => {
@@ -47,16 +53,39 @@ export function loadState() {
   } catch (_) {}
 }
 
-export function getPickerForOrder(orderId) {
-  return AppState.assignments[orderId] || 'Unassigned';
+// Build a pick-location -> picker-name lookup from the latest per-picker
+// optimization results. Locations are assigned to pickers, never orders,
+// so this is the ONLY source of truth for "which picker handles this".
+export function locationToPickerMap() {
+  const map = {};
+  (AppState.pickerResults || []).forEach(r => {
+    (r.assignedLocations || []).forEach(locId => { map[locId] = r.assignedPicker; });
+  });
+  return map;
+}
+
+// An order's lines can land on different pickers, because pick LOCATIONS
+// (not orders) are what get balanced across pickers. Returns the distinct
+// picker name(s) currently covering this order's locations.
+export function getPickersForOrder(orderId) {
+  const order = AppState.orders[orderId];
+  if (!order) return [];
+  const map = locationToPickerMap();
+  const names = new Set();
+  order.lines.forEach(l => { if (map[l.pickLocation]) names.add(map[l.pickLocation]); });
+  return [...names];
 }
 
 export function updatePickerStatus() {
-  const busy = new Set(Object.values(AppState.assignments));
+  const map = locationToPickerMap();
+  const locsByPicker = {};
+  Object.entries(map).forEach(([locId, name]) => {
+    (locsByPicker[name] ||= []).push(locId);
+  });
   AppState.pickers.forEach(p => {
-    p.status = busy.has(p.name) ? 'Busy' : 'Available';
-    p.assignedOrderId =
-      Object.entries(AppState.assignments).find(([, n]) => n === p.name)?.[0] ?? null;
+    const locs = locsByPicker[p.name] || [];
+    p.status = locs.length ? 'Busy' : 'Available';
+    p.assignedLocationCount = locs.length;
   });
 }
 

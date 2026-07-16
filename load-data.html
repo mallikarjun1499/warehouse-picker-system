@@ -137,7 +137,7 @@ window.doLoad=async()=>{
   lb.disabled=true;lb.innerHTML='<i class="fas fa-spinner fa-spin"></i> Parsing…';
   try{
     const{orders,locations,warnings}=await parseExcelFile(buf);
-    AppState.orders=orders;AppState.locations=locations;AppState.dataLoaded=true;AppState.results={};AppState.assignments={};
+    AppState.orders=orders;AppState.locations=locations;AppState.dataLoaded=true;AppState.results={};AppState.pickerResults=[];AppState.batchResult=null;
     saveState();
     if(warnings.length){document.getElementById('warnBox').classList.remove('hidden');document.getElementById('warnText').textContent=warnings.join(' | ');}
     const nO=Object.keys(orders).length,nL=Object.keys(locations).filter(k=>k!=='0').length,nLn=Object.values(orders).reduce((s,o)=>s+o.lines.length,0);
