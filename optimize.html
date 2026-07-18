@@ -142,7 +142,7 @@
       <!-- Location → Picker split preview -->
       <div id="splitPreviewWrap" class="glass-card rounded-2xl p-6" data-aos="fade-up">
         <div class="section-header mb-4"><i class="fas fa-people-arrows text-blue-400"></i> Estimated Balance Preview</div>
-        <p class="text-slate-500 text-sm mb-4">A quick balanced-count estimate so you can sanity-check picker counts before running. The desktop app's GA has no balance constraint — it decides both assignment and each picker's visiting order together, and counts can end up uneven.</p>
+        <p class="text-slate-500 text-sm mb-4">A preview of how many locations each picker will get. The GA runs once on the full combined location list to produce one optimized sequence; that sequence is then split into balanced, contiguous chunks — picker 1 gets the first leg of the optimized route, picker 2 the next leg, and so on.</p>
         <div id="splitPreview" class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-3"></div>
       </div>
 
@@ -245,7 +245,7 @@
 <script src="https://cdnjs.cloudflare.com/ajax/libs/aos/2.3.4/aos.js"></script>
 <script type="module">
 import { AppState, initUI, saveState } from './assets/js/app.js';
-import { optimizeAssignment, manhattanWarehouse } from './assets/js/algorithm.js';
+import { optimizeRoute, manhattanWarehouse } from './assets/js/algorithm.js';
 import { routeSequenceHTML, stepTableHTML, drawWarehouseMap, toast } from './assets/js/ui.js';
 
 initUI();
@@ -277,8 +277,9 @@ function buildBatchPickList() {
 
 // ── Live-preview split ONLY: a fast, deterministic estimate shown while you
 // tick picker checkboxes so the page doesn't have to run the full GA on
-// every click. The actual Step 5 run below uses optimizeAssignment() — the
-// real GA that decides final placement.
+// every click. The actual Step 5 run below calls optimizeRoute() once on
+// the full combined list, then splits that GA-optimized sequence into
+// balanced picker chunks — this preview approximates the chunk sizes only.
 function previewSplit(locs, pickerNames) {
   const assignment = {};
   const k = pickerNames.length;
@@ -415,21 +416,33 @@ async function doRunBatch() {
 
   const results = [];
   try {
-    // ── Unified GA (exact port of the desktop app's PickerRouteGAImpl): a
-    // single chromosome simultaneously decides which picker each location
-    // goes to AND the order that picker visits them in — the desktop app
-    // has no separate assignment-then-route-sequencing stages.
-    setProgress(`Running GA — ${batchLocs.length} locations across ${pickerNames.length} picker(s)…`, 8);
+    // STEP 5.1-5.3: run the Genetic Algorithm ONCE on the full combined,
+    // de-duplicated location list to produce ONE optimized warehouse
+    // picking sequence. No fixed seed — see algorithm.js freshSeed() — so
+    // this is a genuinely new GA search every time the button is clicked.
+    setProgress(`Running GA on ${batchLocs.length} combined locations…`, 8);
     await tick();
-    const gaRes = optimizeAssignment(batchLocs, pickerNames, AppState.locations, gaOpts,
-      (gen, maxGen, fit) => { /* per-generation callback available if progress UI is desired */ });
+    const gaRes = optimizeRoute(batchLocs, AppState.locations, gaOpts,
+      (gen, maxGen, best) => { setProgress(`GA generation ${gen}/${maxGen} — best distance ${best.toFixed(1)} m`, 8 + Math.round((gen / maxGen) * 60)); });
 
-    for (let i = 0; i < pickerNames.length; i++) {
-      const name = pickerNames[i];
-      const seq  = gaRes.sequence[name] || [];
+    // The single optimized sequence, depot bookends stripped off
+    const globalSeq = gaRes.optimizedRoute.filter(id => id !== 0);
 
-      if (!seq.length) {
-        // The desktop GA has no balance constraint — a picker can legitimately end up with 0 locations
+    // STEP 5.4: distribute the OPTIMIZED sequence among the selected
+    // pickers — balanced contiguous chunks that preserve the GA's visiting
+    // order (picker 1 gets the first chunk of the optimized route, picker 2
+    // the next chunk, and so on), NOT based on customer orders in any way.
+    const k = pickerNames.length;
+    const base = Math.floor(globalSeq.length / k), remainder = globalSeq.length % k;
+    let cursor = 0;
+
+    for (let i = 0; i < k; i++) {
+      const name  = pickerNames[i];
+      const count = base + (i < remainder ? 1 : 0);
+      const chunk = globalSeq.slice(cursor, cursor + count);
+      cursor += count;
+
+      if (!chunk.length) {
         results.push({
           assignedPicker: name, assignedLocations: [], optimizedRoute: [0, 0],
           totalDistance: 0, travelTimeMin: 0, steps: [], numPickLocations: 0,
@@ -439,8 +452,9 @@ async function doRunBatch() {
         continue;
       }
 
-      // Build the route/steps directly from the GA's own visiting order (depot -> seq -> depot)
-      const route = [0, ...seq, 0];
+      // Build this picker's own depot -> chunk -> depot route/steps, using
+      // the Manhattan Distance calculation exactly as-is (manhattanWarehouse, unchanged)
+      const route = [0, ...chunk, 0];
       const steps = [];
       let totalDistance = 0;
       for (let s = 0; s < route.length - 1; s++) {
@@ -456,10 +470,10 @@ async function doRunBatch() {
       }
 
       results.push({
-        assignedPicker: name, assignedLocations: seq.slice(), optimizedRoute: route,
+        assignedPicker: name, assignedLocations: chunk.slice(), optimizedRoute: route,
         totalDistance, travelTimeMin: totalDistance / speed, steps,
-        numPickLocations: seq.length, ordersIncluded: Object.keys(AppState.orders),
-        orderId: `${name} — ${seq.length} locations`,
+        numPickLocations: chunk.length, ordersIncluded: Object.keys(AppState.orders),
+        orderId: `${name} — ${chunk.length} locations`,
         generationsRun: gaRes.generationsRun, fitnessHistory: gaRes.fitnessHistory,
       });
     }
@@ -474,7 +488,7 @@ async function doRunBatch() {
     setProgress('Done!', 100);
     await tick();
     renderResults(results);
-    toast(`GA picker assignment + route complete for ${results.length} picker(s)!`, 'success');
+    toast(`GA route optimized and split across ${results.length} picker(s)!`, 'success');
 
   } catch (err) {
     console.error('Picker GA error:', err);
